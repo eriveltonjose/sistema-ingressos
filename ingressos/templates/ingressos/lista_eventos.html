@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Eventos</title>
+
+    <style>
+
+        body{
+            font-family: Arial;
+            background:#f4f6f9;
+            padding:40px;
+        }
+
+        .card{
+            background:white;
+            padding:20px;
+            margin-bottom:20px;
+            border-radius:10px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .btn{
+            background:#007bff;
+            color:white;
+            padding:10px 20px;
+            text-decoration:none;
+            border-radius:5px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<h1>Eventos Disponiveis</h1>
+
+{% for evento in eventos %}
+
+<div class="card">
+
+    <h2>{{ evento.nome }}</h2>
+
+    <p>{{ evento.descricao }}</p>
+
+    <p>
+        <strong>Local:</strong>
+        {{ evento.local }}
+    </p>
+
+    <p>
+        <strong>Valor:</strong>
+        R$ {{ evento.valor }}
+    </p>
+
+    <a class="btn" href="/comprar/{{ evento.id }}/">
+        Comprar Ingresso
+    </a>
+
+</div>
+
+{% endfor %}
+
+</body>
+</html>

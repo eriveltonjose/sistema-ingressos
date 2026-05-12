@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ingresso Gerado</title>
+
+    <style>
+
+        body{
+            font-family:Arial;
+            background:#f4f6f9;
+            padding:40px;
+            text-align:center;
+        }
+
+        .box{
+            background:white;
+            padding:30px;
+            max-width:600px;
+            margin:auto;
+            border-radius:10px;
+        }
+
+        img{
+            margin-top:20px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="box">
+
+    <h1>Ingresso Gerado!</h1>
+
+    <h2>{{ ingresso.evento.nome }}</h2>
+
+    <p>
+        <strong>Comprador:</strong>
+        {{ ingresso.nome_comprador }}
+    </p>
+
+    <p>
+        <strong>Codigo:</strong><br>
+        {{ ingresso.codigo }}
+    </p>
+
+    <img src="data:image/png;base64,{{ qr_code }}">
+
+</div>
+
+</body>
+</html>

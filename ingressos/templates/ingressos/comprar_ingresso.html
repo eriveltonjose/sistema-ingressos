@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprar Ingresso</title>
+
+    <style>
+
+        body{
+            font-family:Arial;
+            background:#f4f6f9;
+            padding:40px;
+        }
+
+        .box{
+            background:white;
+            padding:30px;
+            max-width:500px;
+            margin:auto;
+            border-radius:10px;
+        }
+
+        input{
+            width:100%;
+            padding:10px;
+            margin-bottom:15px;
+        }
+
+        button{
+            background:green;
+            color:white;
+            border:none;
+            padding:12px;
+            width:100%;
+            cursor:pointer;
+        }
+
+    </style>
+
+</head>
+<body>
+
+<div class="box">
+
+    <h1>{{ evento.nome }}</h1>
+
+    <p>{{ evento.descricao }}</p>
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        <input type="text" name="nome" placeholder="Seu nome" required>
+
+        <input type="email" name="email" placeholder="Seu e-mail" required>
+
+        <input type="text" name="telefone" placeholder="Telefone" required>
+
+        <input type="text" name="cpf" placeholder="CPF" required>
+
+        <button type="submit">
+            Finalizar Compra
+        </button>
+
+    </form>
+
+</div>
+
+</body>
+</html>

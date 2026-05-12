@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ingressos Vendidos</title>
+
+    <style>
+
+        body{
+            font-family:Arial;
+            background:#f4f6f9;
+            padding:40px;
+        }
+
+        table{
+            width:100%;
+            background:white;
+            border-collapse:collapse;
+        }
+
+        th, td{
+            padding:12px;
+            border:1px solid #ddd;
+        }
+
+        th{
+            background:#007bff;
+            color:white;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<h1>Ingressos Vendidos</h1>
+
+<table>
+
+    <tr>
+        <th>Evento</th>
+        <th>Nome</th>
+        <th>Email</th>
+        <th>Telefone</th>
+        <th>CPF</th>
+        <th>Codigo</th>
+        <th>Status</th>
+    </tr>
+
+    {% for ingresso in ingressos %}
+
+    <tr>
+
+        <td>{{ ingresso.evento.nome }}</td>
+
+        <td>{{ ingresso.nome_comprador }}</td>
+
+        <td>{{ ingresso.email }}</td>
+
+        <td>{{ ingresso.telefone }}</td>
+
+        <td>{{ ingresso.cpf }}</td>
+
+        <td>{{ ingresso.codigo }}</td>
+
+        <td>
+
+            {% if ingresso.usado %}
+                Utilizado
+            {% else %}
+                Valido
+            {% endif %}
+
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+</body>
+</html>
