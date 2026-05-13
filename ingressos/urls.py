@@ -11,4 +11,5 @@ urlpatterns = [
     path('baixar-pdf/', views.baixar_pdf_ingressos, name='baixar_pdf_ingressos'),
     path('exportar-csv/', views.exportar_csv, name='exportar_csv'),
     path('testar-email/', views.testar_email, name='testar_email'),
+    path('webhook/asaas/', views.webhook_asaas, name='webhook_asaas'),
 ]

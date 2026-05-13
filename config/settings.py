@@ -11,10 +11,13 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
-from pathlib import Path
+
+ASAAS_API_KEY = os.getenv('ASAAS_API_KEY')
+ASAAS_BASE_URL = os.getenv('ASAAS_BASE_URL')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,7 +32,7 @@ SECRET_KEY = 'django-insecure-3i1ejbv$-*7ak91h4$yyzw$u%0kg3o=x(jx75(t2taezz8xcqu
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.15.3', '127.0.0.1']
+ALLOWED_HOSTS = ['192.168.15.3', '127.0.0.1', '10.1.1.23']
 
 
 # Application definition
@@ -137,3 +140,6 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+ASAAS_API_KEY = os.getenv('ASAAS_API_KEY')
+ASAAS_BASE_URL = os.getenv('ASAAS_BASE_URL')

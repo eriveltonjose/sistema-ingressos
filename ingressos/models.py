@@ -32,4 +32,25 @@ class Ingresso(models.Model):
 
     def __str__(self):
         return f"{self.nome_comprador} - {self.evento.nome}"
+
+class Pedido(models.Model):
+    STATUS_CHOICES = [
+        ('PENDENTE', 'Pendente'),
+        ('PAGO', 'Pago'),
+        ('CANCELADO', 'Cancelado'),
+    ]
+
+    evento = models.ForeignKey(Evento, on_delete=models.CASCADE)
+    nome = models.CharField(max_length=200)
+    email = models.EmailField()
+    telefone = models.CharField(max_length=30)
+    cpf = models.CharField(max_length=14)
+    quantidade = models.PositiveIntegerField(default=1)
+    valor_total = models.DecimalField(max_digits=10, decimal_places=2)
+    asaas_payment_id = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDENTE')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nome} - {self.evento.nome} - {self.status}"
 # Create your models here.

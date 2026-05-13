@@ -15,6 +15,12 @@ from django.http import HttpResponse
 from django.core.mail import EmailMessage
 from django.core.mail import send_mail
 from django.conf import settings
+import requests
+from django.conf import settings
+from .models import Evento, Ingresso, Pedido
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 
 def lista_eventos(request):
     eventos = Evento.objects.all()
@@ -51,26 +57,28 @@ def comprar_ingresso(request, evento_id):
                 }
             )
 
-        ingressos_criados = []
+        valor_total = evento.valor * quantidade
 
-        for i in range(quantidade):
-            ingresso = Ingresso.objects.create(
-                evento=evento,
-                nome_comprador=nome,
-                email=email,
-                telefone=telefone,
-                cpf=cpf
-            )
+        pagamento = criar_pagamento_asaas(
+            nome,
+            email,
+            cpf,
+            valor_total
+        )
 
-            ingressos_criados.append(ingresso.id)
+        Pedido.objects.create(
+            evento=evento,
+            nome=nome,
+            email=email,
+            telefone=telefone,
+            cpf=cpf,
+            quantidade=quantidade,
+            valor_total=valor_total,
+            asaas_payment_id=pagamento['payment_id'],
+            status='PENDENTE'
+        )
 
-        ids = ",".join(str(id) for id in ingressos_criados)
-        
-        ingressos_para_email = Ingresso.objects.filter(id__in=ingressos_criados)
-
-        enviar_email_ingressos(ingressos_para_email, email)
-
-        return redirect(f'/sucesso-compra/?ids={ids}')
+        return redirect(pagamento['invoiceUrl'])
 
     return render(
         request,
@@ -354,4 +362,86 @@ Obrigado!
     email.attach('ingressos.pdf', pdf, 'application/pdf')
 
     email.send()
+
+def criar_pagamento_asaas(nome, email, cpf, valor):
+
+    headers = {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'access_token': settings.ASAAS_API_KEY
+    }
+
+    cliente = {
+        "name": nome,
+        "email": email,
+        "cpfCnpj": cpf
+    }
+
+    resposta_cliente = requests.post(
+        f"{settings.ASAAS_BASE_URL}/customers",
+        json=cliente,
+        headers=headers
+    )
+
+    customer_id = resposta_cliente.json()['id']
+
+    cobranca = {
+        "customer": customer_id,
+        "billingType": "CREDIT_CARD",
+        "value": float(valor),
+        "dueDate": "2026-12-30",
+        "description": "Ingresso Evento"
+    }
+
+    resposta_pagamento = requests.post(
+        f"{settings.ASAAS_BASE_URL}/payments",
+        json=cobranca,
+        headers=headers
+    )
+
+    dados = resposta_pagamento.json()
+
+    return {
+        'invoiceUrl': dados['invoiceUrl'],
+        'payment_id': dados['id']
+    }
+
+@csrf_exempt
+def webhook_asaas(request):
+
+    if request.method != 'POST':
+        return JsonResponse({'erro': 'Metodo nao permitido'}, status=405)
+
+    dados = json.loads(request.body)
+
+    evento_asaas = dados.get('event')
+    pagamento = dados.get('payment', {})
+    payment_id = pagamento.get('id')
+
+    if evento_asaas in ['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED']:
+
+        pedido = Pedido.objects.filter(asaas_payment_id=payment_id).first()
+
+        if pedido and pedido.status != 'PAGO':
+
+            ingressos_criados = []
+
+            for i in range(pedido.quantidade):
+                ingresso = Ingresso.objects.create(
+                    evento=pedido.evento,
+                    nome_comprador=pedido.nome,
+                    email=pedido.email,
+                    telefone=pedido.telefone,
+                    cpf=pedido.cpf
+                )
+
+                ingressos_criados.append(ingresso.id)
+
+            pedido.status = 'PAGO'
+            pedido.save()
+
+            ingressos_para_email = Ingresso.objects.filter(id__in=ingressos_criados)
+            enviar_email_ingressos(ingressos_para_email, pedido.email)
+
+    return JsonResponse({'status': 'ok'})    
 # Create your views here.

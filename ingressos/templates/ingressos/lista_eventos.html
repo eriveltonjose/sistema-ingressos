@@ -1,31 +1,74 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
-    <title>Eventos</title>
+    <title>Eventos Disponíveis</title>
 
     <style>
 
         body{
-            font-family: Arial;
-            background:#f4f6f9;
+            margin:0;
             padding:40px;
+            font-family:Arial;
+            background:#f4f6f9;
         }
 
-        .card{
-            background:white;
-            padding:20px;
+        .container{
+            max-width:1100px;
+            margin:auto;
+        }
+
+        h1{
+            text-align:center;
             margin-bottom:20px;
-            border-radius:10px;
-            box-shadow:0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .banner{
+            text-align:center;
+            margin-bottom:40px;
+        }
+
+        .banner img{
+            width:100%;
+            max-width:700px;
+            border-radius:12px;
+            box-shadow:0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .evento{
+            background:white;
+            padding:30px;
+            border-radius:12px;
+            margin-bottom:30px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .evento h2{
+            margin-top:0;
+            font-size:34px;
+        }
+
+        .evento p{
+            font-size:18px;
+            line-height:1.6;
         }
 
         .btn{
-            background:#007bff;
+            display:inline-block;
+            background:#0d6efd;
             color:white;
-            padding:10px 20px;
+            padding:14px 28px;
             text-decoration:none;
-            border-radius:5px;
+            border-radius:8px;
+            margin-top:15px;
+            font-size:18px;
+            font-weight:bold;
+            transition:0.3s;
+        }
+
+        .btn:hover{
+            background:#0b5ed7;
         }
 
     </style>
@@ -34,33 +77,43 @@
 
 <body>
 
-<h1>Eventos Disponiveis</h1>
+<div class="container">
 
-{% for evento in eventos %}
+    <h1>Eventos Disponíveis</h1>
 
-<div class="card">
+    <div class="banner">
+        <img src="http://189.90.139.178:2020/evento/banner-23.jpeg">
+    </div>
 
-    <h2>{{ evento.nome }}</h2>
+    {% for evento in eventos %}
 
-    <p>{{ evento.descricao }}</p>
+        <div class="evento">
 
-    <p>
-        <strong>Local:</strong>
-        {{ evento.local }}
-    </p>
+            <h2>{{ evento.nome }}</h2>
 
-    <p>
-        <strong>Valor:</strong>
-        R$ {{ evento.valor }}
-    </p>
+            <p>
+                {{ evento.descricao }}
+            </p>
 
-    <a class="btn" href="/comprar/{{ evento.id }}/">
-        Comprar Ingresso
-    </a>
+            <p>
+                <strong>Local:</strong>
+                {{ evento.local }}
+            </p>
+
+            <p>
+                <strong>Valor:</strong>
+                R$ {{ evento.valor }}
+            </p>
+
+            <a href="/comprar/{{ evento.id }}/" class="btn">
+                Comprar Ingresso
+            </a>
+
+        </div>
+
+    {% endfor %}
 
 </div>
-
-{% endfor %}
 
 </body>
 </html>
