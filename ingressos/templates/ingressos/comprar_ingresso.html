@@ -49,6 +49,7 @@
     <form method="POST">
 
         {% csrf_token %}
+        <input type="number" name="quantidade" placeholder="Quantidade de ingressos" min="1" value="1" required>
 
         <input type="text" name="nome" placeholder="Seu nome" required>
 

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Compra Finalizada</title>
+
+    <style>
+        body{
+            font-family: Arial;
+            background:#f4f6f9;
+            padding:40px;
+            text-align:center;
+        }
+
+        .container{
+            max-width:900px;
+            margin:auto;
+        }
+
+        .card{
+            background:white;
+            padding:30px;
+            margin-bottom:25px;
+            border-radius:12px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .btn{
+            display:inline-block;
+            background:#007bff;
+            color:white;
+            padding:12px 25px;
+            text-decoration:none;
+            border-radius:6px;
+            margin-bottom:30px;
+            font-weight:bold;
+        }
+
+        .btn:hover{
+            background:#0056b3;
+        }
+
+        img{
+            margin-top:15px;
+        }
+
+        .codigo{
+            font-size:13px;
+            word-break:break-all;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Compra finalizada com sucesso!</h1>
+
+    <a class="btn" href="/baixar-pdf/?ids={{ request.GET.ids }}">
+        Baixar ingressos em PDF
+    </a>
+
+    {% for item in ingressos_com_qr %}
+
+    <div class="card">
+
+        <h2>{{ item.ingresso.evento.nome }}</h2>
+
+        <p>
+            <strong>Comprador:</strong>
+            {{ item.ingresso.nome_comprador }}
+        </p>
+
+        <p>
+            <strong>CPF:</strong>
+            {{ item.ingresso.cpf }}
+        </p>
+
+        <p class="codigo">
+            <strong>Codigo:</strong>
+            {{ item.ingresso.codigo }}
+        </p>
+
+        <img src="data:image/png;base64,{{ item.qr_code }}" width="200">
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
+</body>
+</html>
