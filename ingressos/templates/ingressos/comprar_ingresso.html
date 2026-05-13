@@ -43,14 +43,25 @@
 <div class="box">
 
     <h1>{{ evento.nome }}</h1>
+    <p>
+        <strong>Ingressos disponiveis:</strong>
+        {{ disponiveis }}
+    </p>
+
+{% if messages %}
+    {% for message in messages %}
+        <div style="background:#ffdddd; color:#900; padding:10px; margin-bottom:15px; border-radius:5px;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
 
     <p>{{ evento.descricao }}</p>
 
     <form method="POST">
 
         {% csrf_token %}
-        <input type="number" name="quantidade" placeholder="Quantidade de ingressos" min="1" value="1" required>
-
+        <input type="number" name="quantidade" placeholder="Quantidade de ingressos" min="1" max="{{ disponiveis }}" value="1" required>
         <input type="text" name="nome" placeholder="Seu nome" required>
 
         <input type="email" name="email" placeholder="Seu e-mail" required>
@@ -59,9 +70,19 @@
 
         <input type="text" name="cpf" placeholder="CPF" required>
 
-        <button type="submit">
-            Finalizar Compra
-        </button>
+        {% if disponiveis > 0 %}
+
+            <button type="submit">
+                Finalizar Compra
+            </button>
+
+        {% else %}
+
+            <button type="button" disabled style="background:gray;">
+                Ingressos Esgotados
+            </button>
+
+        {% endif %}
 
     </form>
 

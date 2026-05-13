@@ -9,6 +9,12 @@ import qrcode
 from io import BytesIO
 from django.core.files.base import ContentFile
 import base64
+from django.contrib import messages
+import csv
+from django.http import HttpResponse
+from django.core.mail import EmailMessage
+from django.core.mail import send_mail
+from django.conf import settings
 
 def lista_eventos(request):
     eventos = Evento.objects.all()
@@ -19,6 +25,9 @@ def comprar_ingresso(request, evento_id):
 
     evento = get_object_or_404(Evento, id=evento_id)
 
+    vendidos = Ingresso.objects.filter(evento=evento).count()
+    disponiveis = evento.quantidade_total - vendidos
+
     if request.method == 'POST':
 
         nome = request.POST.get('nome')
@@ -26,6 +35,21 @@ def comprar_ingresso(request, evento_id):
         telefone = request.POST.get('telefone')
         cpf = request.POST.get('cpf')
         quantidade = int(request.POST.get('quantidade', 1))
+
+        if quantidade > disponiveis:
+            messages.error(
+                request,
+                f'Quantidade indisponivel. Restam apenas {disponiveis} ingresso(s).'
+            )
+
+            return render(
+                request,
+                'ingressos/comprar_ingresso.html',
+                {
+                    'evento': evento,
+                    'disponiveis': disponiveis
+                }
+            )
 
         ingressos_criados = []
 
@@ -41,11 +65,21 @@ def comprar_ingresso(request, evento_id):
             ingressos_criados.append(ingresso.id)
 
         ids = ",".join(str(id) for id in ingressos_criados)
+        
+        ingressos_para_email = Ingresso.objects.filter(id__in=ingressos_criados)
+
+        enviar_email_ingressos(ingressos_para_email, email)
 
         return redirect(f'/sucesso-compra/?ids={ids}')
 
-    return render(request, 'ingressos/comprar_ingresso.html', {'evento': evento})
-
+    return render(
+        request,
+        'ingressos/comprar_ingresso.html',
+        {
+            'evento': evento,
+            'disponiveis': disponiveis
+        }
+    )
 
 def ingresso_sucesso(request, ingresso_id):
 
@@ -68,12 +102,32 @@ def ingresso_sucesso(request, ingresso_id):
 
 def ingressos_vendidos(request):
 
+    evento_id = request.GET.get('evento')
+
+    eventos = Evento.objects.all()
+
     ingressos = Ingresso.objects.all().order_by('-criado_em')
+
+    if evento_id:
+        ingressos = ingressos.filter(evento_id=evento_id)
+
+    total_vendidos = ingressos.count()
+
+    total_utilizados = ingressos.filter(usado=True).count()
+
+    total_validos = ingressos.filter(usado=False).count()
 
     return render(
         request,
         'ingressos/ingressos_vendidos.html',
-        {'ingressos': ingressos}
+        {
+            'ingressos': ingressos,
+            'eventos': eventos,
+            'evento_id': evento_id,
+            'total_vendidos': total_vendidos,
+            'total_utilizados': total_utilizados,
+            'total_validos': total_validos
+        }
     )
 def validar_ingresso(request, codigo):
 
@@ -177,4 +231,127 @@ def baixar_pdf_ingressos(request):
     p.save()
 
     return response
+def exportar_csv(request):
+
+    evento_id = request.GET.get('evento')
+
+    ingressos = Ingresso.objects.all()
+
+    if evento_id:
+        ingressos = ingressos.filter(evento_id=evento_id)
+
+    response = HttpResponse(content_type='text/csv')
+
+    response['Content-Disposition'] = 'attachment; filename="ingressos.csv"'
+
+    writer = csv.writer(response)
+
+    writer.writerow([
+        'Evento',
+        'Nome',
+        'Email',
+        'Telefone',
+        'CPF',
+        'Status'
+    ])
+
+    for ingresso in ingressos:
+
+        status = 'Utilizado' if ingresso.usado else 'Valido'
+
+        writer.writerow([
+            ingresso.evento.nome,
+            ingresso.nome_comprador,
+            ingresso.email,
+            ingresso.telefone,
+            ingresso.cpf,
+            status
+        ])
+
+    return response
+def testar_email(request):
+
+    send_mail(
+        'Teste Sistema de Ingressos',
+        'Seu sistema de envio de e-mail esta funcionando!',
+        settings.EMAIL_HOST_USER,
+        ['erivelton.jose@ambr.org.br'],
+        fail_silently=False,
+    )
+
+    return HttpResponse('E-mail enviado com sucesso!')
+def gerar_pdf_ingressos_bytes(ingressos):
+
+    buffer_pdf = BytesIO()
+
+    p = canvas.Canvas(buffer_pdf, pagesize=A4)
+    largura, altura = A4
+
+    for ingresso in ingressos:
+
+        url_validacao = f"http://192.168.15.3:8000/validar/{ingresso.codigo}/"
+
+        qr = qrcode.make(url_validacao)
+
+        buffer_qr = BytesIO()
+        qr.save(buffer_qr, format='PNG')
+        buffer_qr.seek(0)
+
+        p.setFont("Helvetica-Bold", 22)
+        p.drawCentredString(largura / 2, altura - 80, "INGRESSO DO EVENTO")
+
+        p.setFont("Helvetica-Bold", 18)
+        p.drawCentredString(largura / 2, altura - 130, ingresso.evento.nome)
+
+        p.setFont("Helvetica", 13)
+        p.drawCentredString(largura / 2, altura - 180, f"Comprador: {ingresso.nome_comprador}")
+        p.drawCentredString(largura / 2, altura - 205, f"CPF: {ingresso.cpf}")
+        p.drawCentredString(largura / 2, altura - 230, f"Codigo: {ingresso.codigo}")
+
+        p.drawImage(
+            ImageReader(buffer_qr),
+            largura / 2 - 90,
+            altura - 460,
+            width=180,
+            height=180
+        )
+
+        p.setFont("Helvetica", 10)
+        p.drawCentredString(largura / 2, altura - 500, "Apresente este QR Code na entrada do evento.")
+
+        p.showPage()
+
+    p.save()
+
+    buffer_pdf.seek(0)
+
+    return buffer_pdf.getvalue()
+def enviar_email_ingressos(ingressos, email_destino):
+
+    pdf = gerar_pdf_ingressos_bytes(ingressos)
+
+    assunto = 'Seus ingressos foram gerados'
+
+    mensagem = '''
+Olá!
+
+Sua compra foi registrada com sucesso.
+
+Segue em anexo o PDF com seus ingressos e QR Codes.
+
+Apresente o QR Code na entrada do evento.
+
+Obrigado!
+'''
+
+    email = EmailMessage(
+        assunto,
+        mensagem,
+        settings.DEFAULT_FROM_EMAIL,
+        [email_destino],
+    )
+
+    email.attach('ingressos.pdf', pdf, 'application/pdf')
+
+    email.send()
 # Create your views here.

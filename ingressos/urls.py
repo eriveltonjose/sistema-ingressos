@@ -9,4 +9,6 @@ urlpatterns = [
     path('validar/<uuid:codigo>/', views.validar_ingresso, name='validar_ingresso'),
     path('sucesso-compra/', views.sucesso_compra, name='sucesso_compra'), 
     path('baixar-pdf/', views.baixar_pdf_ingressos, name='baixar_pdf_ingressos'),
+    path('exportar-csv/', views.exportar_csv, name='exportar_csv'),
+    path('testar-email/', views.testar_email, name='testar_email'),
 ]
