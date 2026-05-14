@@ -4,7 +4,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 import tempfile
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Evento, Ingresso
+from .models import Evento, Ingresso, Pedido
 import qrcode
 from io import BytesIO
 from django.core.files.base import ContentFile
@@ -57,10 +57,6 @@ def comprar_ingresso(request, evento_id):
                 }
             )
 
-        messages.error(
-            request,
-            'Pagamento Asaas ainda nao configurado. Informe a chave da API no arquivo .env.'
-        )
 
         return render(
             request,
@@ -80,6 +76,67 @@ def comprar_ingresso(request, evento_id):
         }
     )
 
+def comprar_ingresso(request, evento_id):
+
+    evento = get_object_or_404(Evento, id=evento_id)
+
+    vendidos = Ingresso.objects.filter(evento=evento).count()
+    disponiveis = evento.quantidade_total - vendidos
+
+    if request.method == 'POST':
+
+        nome = request.POST.get('nome')
+        email = request.POST.get('email')
+        telefone = request.POST.get('telefone')
+        cpf = request.POST.get('cpf')
+        quantidade = int(request.POST.get('quantidade', 1))
+
+        if quantidade > disponiveis:
+            messages.error(
+                request,
+                f'Quantidade indisponivel. Restam apenas {disponiveis} ingresso(s).'
+            )
+
+            return render(
+                request,
+                'ingressos/comprar_ingresso.html',
+                {
+                    'evento': evento,
+                    'disponiveis': disponiveis
+                }
+            )
+
+        valor_total = evento.valor * quantidade
+
+        pagamento = criar_pagamento_asaas(
+            nome,
+            email,
+            cpf,
+            valor_total
+        )
+
+        Pedido.objects.create(
+            evento=evento,
+            nome=nome,
+            email=email,
+            telefone=telefone,
+            cpf=cpf,
+            quantidade=quantidade,
+            valor_total=valor_total,
+            asaas_payment_id=pagamento['payment_id'],
+            status='PENDENTE'
+        )
+
+        return redirect(pagamento['invoiceUrl'])
+
+    return render(
+        request,
+        'ingressos/comprar_ingresso.html',
+        {
+            'evento': evento,
+            'disponiveis': disponiveis
+        }
+    )
 def ingresso_sucesso(request, ingresso_id):
 
     ingresso = get_object_or_404(Ingresso, id=ingresso_id)
@@ -374,7 +431,12 @@ def criar_pagamento_asaas(nome, email, cpf, valor):
         headers=headers
     )
 
-    customer_id = resposta_cliente.json()['id']
+    dados_cliente = resposta_cliente.json()
+
+    if 'id' not in dados_cliente:
+        raise Exception(f"Erro ao criar cliente no Asaas: {dados_cliente}")
+
+    customer_id = dados_cliente['id']
 
     cobranca = {
         "customer": customer_id,
@@ -390,18 +452,26 @@ def criar_pagamento_asaas(nome, email, cpf, valor):
         headers=headers
     )
 
-    dados = resposta_pagamento.json()
+    dados_pagamento = resposta_pagamento.json()
+
+    if 'invoiceUrl' not in dados_pagamento or 'id' not in dados_pagamento:
+        raise Exception(f"Erro ao criar cobrança no Asaas: {dados_pagamento}")
 
     return {
-        'invoiceUrl': dados['invoiceUrl'],
-        'payment_id': dados['id']
+        'invoiceUrl': dados_pagamento['invoiceUrl'],
+        'payment_id': dados_pagamento['id']
     }
 
 @csrf_exempt
 def webhook_asaas(request):
 
     if request.method != 'POST':
-        return JsonResponse({'erro': 'Metodo nao permitido'}, status=405)
+        return JsonResponse({'status': 'webhook ativo'})
+
+    token_recebido = request.headers.get('asaas-access-token')
+
+    if token_recebido != settings.ASAAS_WEBHOOK_TOKEN:
+        return JsonResponse({'erro': 'token invalido'}, status=403)
 
     dados = json.loads(request.body)
 
@@ -434,9 +504,10 @@ def webhook_asaas(request):
             ingressos_para_email = Ingresso.objects.filter(id__in=ingressos_criados)
             enviar_email_ingressos(ingressos_para_email, pedido.email)
 
-    return JsonResponse({'status': 'ok'})
+    return JsonResponse({'status': 'ok'})  
+
 
 def checkin_scanner(request):
-
-    return render(request, 'ingressos/checkin_scanner.html')    
+    return render(request, 'ingressos/checkin_scanner.html')
 # Create your views here.
+

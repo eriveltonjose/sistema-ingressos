@@ -34,6 +34,34 @@
             width:100%;
             cursor:pointer;
         }
+@media (max-width: 768px) {
+
+    body{
+        padding:20px;
+    }
+
+    .box, .container, form{
+        width:100%;
+        max-width:100%;
+        box-sizing:border-box;
+    }
+
+    input, select, button{
+        width:100%;
+        box-sizing:border-box;
+        font-size:16px;
+    }
+
+    h1{
+        font-size:28px;
+        text-align:center;
+    }
+
+    .btn, button{
+        padding:14px;
+        font-size:16px;
+    }
+}
 
     </style>
 
@@ -60,29 +88,63 @@
 
     <form method="POST">
 
-        {% csrf_token %}
-        <input type="number" name="quantidade" placeholder="Quantidade de ingressos" min="1" max="{{ disponiveis }}" value="1" required>
-        <input type="text" name="nome" placeholder="Seu nome" required>
+    {% csrf_token %}
 
-        <input type="email" name="email" placeholder="Seu e-mail" required>
+    <input
+        type="number"
+        name="quantidade"
+        placeholder="Quantidade de ingressos"
+        min="1"
+        max="{{ disponiveis }}"
+        value="1"
+        required
+    >
 
-        <input type="text" name="telefone" placeholder="Telefone" required>
+    <input
+        type="text"
+        name="nome"
+        placeholder="Seu nome"
+        required
+    >
 
-        <input type="text" name="cpf" placeholder="CPF" required>
+    <input
+        type="email"
+        name="email"
+        placeholder="Seu e-mail"
+        required
+    >
 
-        {% if disponiveis > 0 %}
+    <input
+        type="text"
+        name="telefone"
+        placeholder="Telefone"
+        inputmode="numeric"
+        required
+    >
 
-            <button type="submit">
-                Finalizar Compra
-            </button>
+    <input
+        type="text"
+        name="cpf"
+        placeholder="CPF"
+        maxlength="11"
+        pattern="[0-9]{11}"
+        inputmode="numeric"
+        required
+    >
 
-        {% else %}
+    {% if disponiveis > 0 %}
 
-            <button type="button" disabled style="background:gray;">
-                Ingressos Esgotados
-            </button>
+        <button type="submit">
+            Finalizar Compra
+        </button>
 
-        {% endif %}
+    {% else %}
+
+        <button type="button" disabled>
+            Esgotado
+        </button>
+
+    {% endif %}
 
     </form>
 

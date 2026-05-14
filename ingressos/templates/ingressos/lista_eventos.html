@@ -144,35 +144,7 @@
     </div>
 
 {% endfor %}
-    </div>
 
-    {% for evento in eventos %}
-
-        <div class="evento">
-
-            <h2>{{ evento.nome }}</h2>
-
-            <p>
-                {{ evento.descricao }}
-            </p>
-
-            <p>
-                <strong>Local:</strong>
-                {{ evento.local }}
-            </p>
-
-            <p>
-                <strong>Valor:</strong>
-                R$ {{ evento.valor }}
-            </p>
-
-            <a href="/comprar/{{ evento.id }}/" class="btn">
-                Comprar Ingresso
-            </a>
-
-        </div>
-
-    {% endfor %}
 
 </div>
 

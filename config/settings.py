@@ -18,7 +18,7 @@ load_dotenv()
 
 ASAAS_API_KEY = os.getenv('ASAAS_API_KEY')
 ASAAS_BASE_URL = os.getenv('ASAAS_BASE_URL')
-
+ASAAS_WEBHOOK_TOKEN = os.getenv('ASAAS_WEBHOOK_TOKEN')
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
