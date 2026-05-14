@@ -12,4 +12,5 @@ urlpatterns = [
     path('exportar-csv/', views.exportar_csv, name='exportar_csv'),
     path('testar-email/', views.testar_email, name='testar_email'),
     path('webhook/asaas/', views.webhook_asaas, name='webhook_asaas'),
+    path('checkin/', views.checkin_scanner, name='checkin_scanner'),
 ]

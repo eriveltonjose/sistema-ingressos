@@ -9,6 +9,8 @@ class Evento(models.Model):
     local = models.CharField(max_length=200)
     valor = models.DecimalField(max_digits=8, decimal_places=2)
     quantidade_total = models.PositiveIntegerField()
+    banner = models.ImageField(upload_to='eventos/', blank=True, null=True)
+	
 
     def __str__(self):
         return self.nome

@@ -32,7 +32,7 @@ SECRET_KEY = 'django-insecure-3i1ejbv$-*7ak91h4$yyzw$u%0kg3o=x(jx75(t2taezz8xcqu
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.15.3', '127.0.0.1', '10.1.1.23']
+ALLOWED_HOSTS = ['192.168.15.3', '127.0.0.1','ingressos.e-especialista.org.br', '200.98.64.121']
 
 
 # Application definition
@@ -143,3 +143,8 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 ASAAS_API_KEY = os.getenv('ASAAS_API_KEY')
 ASAAS_BASE_URL = os.getenv('ASAAS_BASE_URL')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'

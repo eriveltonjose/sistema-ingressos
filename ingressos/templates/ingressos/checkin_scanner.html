@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Check-in QR Code</title>
+
+    <style>
+        body{
+            font-family: Arial;
+            background:#f4f6f9;
+            text-align:center;
+            padding:20px;
+        }
+
+        .box{
+            max-width:500px;
+            margin:auto;
+            background:white;
+            padding:25px;
+            border-radius:12px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        #reader{
+            width:100%;
+            margin-top:20px;
+        }
+
+        .ok{
+            background:#d4edda;
+            color:#155724;
+            padding:15px;
+            border-radius:8px;
+            margin-top:20px;
+            font-weight:bold;
+        }
+
+        .erro{
+            background:#f8d7da;
+            color:#721c24;
+            padding:15px;
+            border-radius:8px;
+            margin-top:20px;
+            font-weight:bold;
+        }
+
+        .btn{
+            display:inline-block;
+            margin-top:20px;
+            padding:12px 20px;
+            background:#007bff;
+            color:white;
+            text-decoration:none;
+            border-radius:8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+
+    <h1>Check-in do Evento</h1>
+
+    <p>Aponte a câmera para o QR Code do ingresso.</p>
+
+    <div id="reader"></div>
+
+    <div id="resultado"></div>
+
+    <a href="/vendidos/" class="btn">
+        Ver painel de vendidos
+    </a>
+
+</div>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<script>
+    function sucesso(decodedText, decodedResult) {
+
+        document.getElementById("resultado").innerHTML =
+            '<div class="ok">QR Code lido com sucesso! Redirecionando...</div>';
+
+        setTimeout(function(){
+            window.location.href = decodedText;
+        }, 800);
+    }
+
+    function erro(errorMessage) {
+        // ignora erros de leitura contínua
+    }
+
+    const scanner = new Html5QrcodeScanner(
+        "reader",
+        {
+            fps: 10,
+            qrbox: 250
+        }
+    );
+
+    scanner.render(sucesso, erro);
+</script>
+
+</body>
+</html>

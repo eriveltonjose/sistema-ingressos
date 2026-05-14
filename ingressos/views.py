@@ -57,28 +57,19 @@ def comprar_ingresso(request, evento_id):
                 }
             )
 
-        valor_total = evento.valor * quantidade
-
-        pagamento = criar_pagamento_asaas(
-            nome,
-            email,
-            cpf,
-            valor_total
+        messages.error(
+            request,
+            'Pagamento Asaas ainda nao configurado. Informe a chave da API no arquivo .env.'
         )
 
-        Pedido.objects.create(
-            evento=evento,
-            nome=nome,
-            email=email,
-            telefone=telefone,
-            cpf=cpf,
-            quantidade=quantidade,
-            valor_total=valor_total,
-            asaas_payment_id=pagamento['payment_id'],
-            status='PENDENTE'
+        return render(
+            request,
+            'ingressos/comprar_ingresso.html',
+            {
+                'evento': evento,
+                'disponiveis': disponiveis
+            }
         )
-
-        return redirect(pagamento['invoiceUrl'])
 
     return render(
         request,
@@ -443,5 +434,9 @@ def webhook_asaas(request):
             ingressos_para_email = Ingresso.objects.filter(id__in=ingressos_criados)
             enviar_email_ingressos(ingressos_para_email, pedido.email)
 
-    return JsonResponse({'status': 'ok'})    
+    return JsonResponse({'status': 'ok'})
+
+def checkin_scanner(request):
+
+    return render(request, 'ingressos/checkin_scanner.html')    
 # Create your views here.

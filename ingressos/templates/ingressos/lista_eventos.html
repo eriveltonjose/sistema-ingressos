@@ -70,6 +70,39 @@
         .btn:hover{
             background:#0b5ed7;
         }
+@media (max-width: 768px) {
+
+    	body{
+        	padding:20px;
+    	}
+
+    	h1{
+        	font-size:28px;
+    	}
+
+    	.banner img{
+        	max-width:100%;
+        	border-radius:10px;
+    	}
+
+    	.evento{
+        	padding:22px;
+    	}
+
+    	.evento h2{
+        	font-size:26px;
+    	}
+
+    	.evento p{
+        	font-size:16px;
+    	}
+
+    	.btn{
+        	width:100%;
+        	text-align:center;
+        	box-sizing:border-box;
+    	}
+}
 
     </style>
 
@@ -81,8 +114,36 @@
 
     <h1>Eventos Disponíveis</h1>
 
-    <div class="banner">
-        <img src="http://189.90.139.178:2020/evento/banner-23.jpeg">
+    
+{% for evento in eventos %}
+
+    {% if evento.banner %}
+        <div class="banner">
+            <img src="{{ evento.banner.url }}" alt="{{ evento.nome }}">
+        </div>
+    {% endif %}
+
+    <div class="evento">
+        <h2>{{ evento.nome }}</h2>
+
+        <p>{{ evento.descricao }}</p>
+
+        <p>
+            <strong>Local:</strong>
+            {{ evento.local }}
+        </p>
+
+        <p>
+            <strong>Valor:</strong>
+            R$ {{ evento.valor }}
+        </p>
+
+        <a href="/comprar/{{ evento.id }}/" class="btn">
+            Comprar Ingresso
+        </a>
+    </div>
+
+{% endfor %}
     </div>
 
     {% for evento in eventos %}
