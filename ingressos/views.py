@@ -21,6 +21,7 @@ from .models import Evento, Ingresso, Pedido
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from django.utils import timezone
 
 def lista_eventos(request):
     eventos = Evento.objects.all()
@@ -185,30 +186,39 @@ def ingressos_vendidos(request):
             'total_validos': total_validos
         }
     )
+
+
 def validar_ingresso(request, codigo):
 
-    ingresso = get_object_or_404(Ingresso, codigo=codigo)
+    ingresso = get_object_or_404(
+        Ingresso,
+        codigo=codigo
+    )
 
-    ja_usado = ingresso.usado
+    if ingresso.usado:
 
-    if ja_usado:
-        status = 'INGRESSO JA UTILIZADO'
-        tipo = 'erro'
-    else:
-        ingresso.usado = True
-        ingresso.save()
-        status = 'INGRESSO VALIDADO COM SUCESSO'
-        tipo = 'ok'
+        return render(
+            request,
+            'ingressos/checkin_resultado.html',
+            {
+                'status': 'usado',
+                'ingresso': ingresso
+            }
+        )
+
+    ingresso.usado = True
+    ingresso.data_checkin = timezone.now()
+    ingresso.save()
 
     return render(
         request,
-        'ingressos/validar_ingresso.html',
+        'ingressos/checkin_resultado.html',
         {
-            'ingresso': ingresso,
-            'status': status,
-            'tipo': tipo
+            'status': 'ok',
+            'ingresso': ingresso
         }
     )
+
 def sucesso_compra(request):
 
     ids = request.GET.get('ids', '')
@@ -219,7 +229,8 @@ def sucesso_compra(request):
     ingressos_com_qr = []
 
     for ingresso in ingressos:
-        url_validacao = f"http://192.168.15.3:8000/validar/{ingresso.codigo}/"
+
+        url_validacao = f"https://ingressos.e-especialista.org.br/validar/{ingresso.codigo}/"
 
         qr = qrcode.make(url_validacao)
 
@@ -238,6 +249,7 @@ def sucesso_compra(request):
         'ingressos/sucesso_compra.html',
         {'ingressos_com_qr': ingressos_com_qr}
     )
+
 def baixar_pdf_ingressos(request):
 
     ids = request.GET.get('ids', '')
@@ -253,40 +265,118 @@ def baixar_pdf_ingressos(request):
 
     for ingresso in ingressos:
 
-        url_validacao = f"http://192.168.15.3:8000/validar/{ingresso.codigo}/"
+        # URL validação
+        url_validacao = f"https://ingressos.e-especialista.org.br/validar/{ingresso.codigo}/"
 
+        # QRCode
         qr = qrcode.make(url_validacao)
 
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
-        qr.save(temp_file.name)
+        temp_qr = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+        qr.save(temp_qr.name)
 
-        p.setFont("Helvetica-Bold", 22)
-        p.drawCentredString(largura / 2, altura - 80, "INGRESSO DO EVENTO")
+        # =========================
+        # BANNER DO EVENTO
+        # =========================
+        if ingresso.evento.banner:
 
+            try:
+                banner_path = ingresso.evento.banner.path
+
+                p.drawImage(
+                    ImageReader(banner_path),
+                    40,
+                    altura - 240,
+                    width=largura - 80,
+                    height=170,
+                    preserveAspectRatio=True
+                )
+
+            except Exception:
+                pass
+
+        # =========================
+        # TITULO
+        # =========================
+        p.setFont("Helvetica-Bold", 24)
+        p.drawCentredString(
+            largura / 2,
+            altura - 280,
+            "INGRESSO DO EVENTO"
+        )
+
+        # =========================
+        # NOME EVENTO
+        # =========================
         p.setFont("Helvetica-Bold", 18)
-        p.drawCentredString(largura / 2, altura - 130, ingresso.evento.nome)
+        p.drawCentredString(
+            largura / 2,
+            altura - 320,
+            ingresso.evento.nome
+        )
 
+        # =========================
+        # LINHA
+        # =========================
+        p.line(60, altura - 340, largura - 60, altura - 340)
+
+        # =========================
+        # DADOS
+        # =========================
         p.setFont("Helvetica", 13)
-        p.drawCentredString(largura / 2, altura - 180, f"Comprador: {ingresso.nome_comprador}")
-        p.drawCentredString(largura / 2, altura - 205, f"CPF: {ingresso.cpf}")
-        p.drawCentredString(largura / 2, altura - 230, f"Codigo: {ingresso.codigo}")
 
+        p.drawString(
+            80,
+            altura - 390,
+            f"Comprador: {ingresso.nome_comprador}"
+        )
+
+        p.drawString(
+            80,
+            altura - 420,
+            f"CPF: {ingresso.cpf}"
+        )
+
+        p.drawString(
+            80,
+            altura - 450,
+            f"Código: {ingresso.codigo}"
+        )
+
+        # =========================
+        # QR CODE
+        # =========================
         p.drawImage(
-            ImageReader(temp_file.name),
+            ImageReader(temp_qr.name),
             largura / 2 - 90,
-            altura - 460,
+            altura - 700,
             width=180,
             height=180
         )
 
+        # =========================
+        # TEXTO RODAPÉ
+        # =========================
         p.setFont("Helvetica", 10)
-        p.drawCentredString(largura / 2, altura - 500, "Apresente este QR Code na entrada do evento.")
+
+        p.drawCentredString(
+            largura / 2,
+            altura - 720,
+            "Apresente este QR Code na entrada do evento."
+        )
+
+        p.drawCentredString(
+            largura / 2,
+            altura - 740,
+            "Ingresso válido somente após confirmação do pagamento."
+        )
 
         p.showPage()
 
     p.save()
 
     return response
+        
+
 def exportar_csv(request):
 
     evento_id = request.GET.get('evento')
@@ -336,6 +426,7 @@ def testar_email(request):
     )
 
     return HttpResponse('E-mail enviado com sucesso!')
+
 def gerar_pdf_ingressos_bytes(ingressos):
 
     buffer_pdf = BytesIO()
@@ -345,35 +436,116 @@ def gerar_pdf_ingressos_bytes(ingressos):
 
     for ingresso in ingressos:
 
-        url_validacao = f"http://192.168.15.3:8000/validar/{ingresso.codigo}/"
+        # =========================
+        # URL DE VALIDACAO
+        # =========================
+        url_validacao = f"https://ingressos.e-especialista.org.br/validar/{ingresso.codigo}/"
 
+        # =========================
+        # QR CODE
+        # =========================
         qr = qrcode.make(url_validacao)
 
         buffer_qr = BytesIO()
         qr.save(buffer_qr, format='PNG')
         buffer_qr.seek(0)
 
-        p.setFont("Helvetica-Bold", 22)
-        p.drawCentredString(largura / 2, altura - 80, "INGRESSO DO EVENTO")
+        # =========================
+        # BANNER DO EVENTO
+        # =========================
+        if ingresso.evento.banner:
 
-        p.setFont("Helvetica-Bold", 18)
-        p.drawCentredString(largura / 2, altura - 130, ingresso.evento.nome)
+            try:
 
-        p.setFont("Helvetica", 13)
-        p.drawCentredString(largura / 2, altura - 180, f"Comprador: {ingresso.nome_comprador}")
-        p.drawCentredString(largura / 2, altura - 205, f"CPF: {ingresso.cpf}")
-        p.drawCentredString(largura / 2, altura - 230, f"Codigo: {ingresso.codigo}")
+                banner_path = ingresso.evento.banner.path
 
+                p.drawImage(
+                    ImageReader(banner_path),
+                    40,
+                    altura - 240,
+                    width=largura - 80,
+                    height=170,
+                    preserveAspectRatio=True
+                )
+
+            except Exception:
+                pass
+
+        # =========================
+        # TITULO
+        # =========================
+        p.setFont("Helvetica-Bold", 24)
+
+        p.drawCentredString(
+            largura / 2,
+            altura - 280,
+            ingresso.evento.nome
+        )
+
+        # =========================
+        # LINHA DIVISORIA
+        # =========================
+        p.line(
+            60,
+            altura - 300,
+            largura - 60,
+            altura - 300
+        )
+
+        # =========================
+        # DADOS COMPRADOR
+        # =========================
+        p.setFont("Helvetica", 14)
+
+        p.drawCentredString(
+            largura / 2,
+            altura - 360,
+            f"Comprador: {ingresso.nome_comprador}"
+        )
+
+        p.drawCentredString(
+            largura / 2,
+            altura - 395,
+            f"CPF: {ingresso.cpf}"
+        )
+
+        p.setFont("Helvetica", 12)
+
+        p.drawCentredString(
+            largura / 2,
+            altura - 435,
+            f"Codigo: {ingresso.codigo}"
+        )
+
+        # =========================
+        # QR CODE
+        # =========================
         p.drawImage(
             ImageReader(buffer_qr),
-            largura / 2 - 90,
-            altura - 460,
-            width=180,
-            height=180
+            largura / 2 - 110,
+            altura - 700,
+            width=220,
+            height=220
+        )
+
+        # =========================
+        # TEXTO RODAPE
+        # =========================
+        p.setFont("Helvetica-Bold", 12)
+
+        p.drawCentredString(
+            largura / 2,
+            altura - 735,
+            "Apresente este QR Code na entrada do evento."
         )
 
         p.setFont("Helvetica", 10)
-        p.drawCentredString(largura / 2, altura - 500, "Apresente este QR Code na entrada do evento.")
+
+        p.drawCentredString(
+            largura / 2,
+            altura - 755,
+            "Ingresso individual e valido para uma unica entrada."
+        )
 
         p.showPage()
 
@@ -382,6 +554,7 @@ def gerar_pdf_ingressos_bytes(ingressos):
     buffer_pdf.seek(0)
 
     return buffer_pdf.getvalue()
+
 def enviar_email_ingressos(ingressos, email_destino):
 
     pdf = gerar_pdf_ingressos_bytes(ingressos)
