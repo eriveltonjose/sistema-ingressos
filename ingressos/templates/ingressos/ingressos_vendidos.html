@@ -90,17 +90,33 @@
 
 <div style="text-align:center; margin-bottom:20px;">
 
-    <a href="/exportar-csv/?evento={{ evento_id }}"
-       style="
-            background:green;
-            color:white;
-            padding:12px 20px;
-            text-decoration:none;
-            border-radius:6px;
-            font-weight:bold;
-       ">
-        Exportar CSV
-    </a>
+{% if evento_id %}
+<a href="/exportar-csv/?evento={{ evento_id }}"
+   style="
+        background:green;
+        color:white;
+        padding:12px 20px;
+        text-decoration:none;
+        border-radius:6px;
+        font-weight:bold;
+   ">
+    Exportar CSV
+</a>
+{% else %}
+<a href="/exportar-csv/"
+   style="
+        background:green;
+        color:white;
+        padding:12px 20px;
+        text-decoration:none;
+        border-radius:6px;
+        font-weight:bold;
+   ">
+    Exportar CSV
+</a>
+{% endif %}
+
+</div>
 
 </div>
 
@@ -174,9 +190,9 @@
 
         <td>{{ ingresso.email }}</td>
 
-        <td>{{ ingresso.telefone }}</td>
+        <td>{{ ingresso.telefone_anonimo }}</td>
 
-        <td>{{ ingresso.cpf }}</td>
+	<td>{{ ingresso.cpf_anonimo }}</td>
 
         <td>
 

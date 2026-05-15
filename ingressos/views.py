@@ -23,6 +23,23 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils import timezone
 
+def anonimizar_telefone(telefone):
+    telefone = str(telefone or '')
+
+    if len(telefone) >= 6:
+        return telefone[:4] + '*****' + telefone[-2:]
+
+    return telefone
+
+
+def anonimizar_cpf(cpf):
+    cpf = str(cpf or '')
+
+    if len(cpf) >= 6:
+        return cpf[:3] + '*****' + cpf[-3:]
+
+    return cpf
+
 def lista_eventos(request):
     eventos = Evento.objects.all()
     return render(request, 'ingressos/lista_eventos.html', {'eventos': eventos})
@@ -168,6 +185,11 @@ def ingressos_vendidos(request):
     if evento_id:
         ingressos = ingressos.filter(evento_id=evento_id)
 
+    # ANONIMIZAR DADOS
+    for ingresso in ingressos:
+        ingresso.telefone_anonimo = anonimizar_telefone(ingresso.telefone)
+        ingresso.cpf_anonimo = anonimizar_cpf(ingresso.cpf)
+
     total_vendidos = ingressos.count()
 
     total_utilizados = ingressos.filter(usado=True).count()
@@ -264,6 +286,8 @@ def baixar_pdf_ingressos(request):
     largura, altura = A4
 
     for ingresso in ingressos:
+        ingresso.telefone_anonimo = anonimizar_telefone(ingresso.telefone)
+        ingresso.cpf_anonimo = anonimizar_cpf(ingresso.cpf)
 
         # URL validação
         url_validacao = f"https://ingressos.e-especialista.org.br/validar/{ingresso.codigo}/"
@@ -383,7 +407,7 @@ def exportar_csv(request):
 
     ingressos = Ingresso.objects.all()
 
-    if evento_id:
+    if evento_id and evento_id != 'Nome':
         ingressos = ingressos.filter(evento_id=evento_id)
 
     response = HttpResponse(content_type='text/csv')
@@ -682,5 +706,22 @@ def webhook_asaas(request):
 
 def checkin_scanner(request):
     return render(request, 'ingressos/checkin_scanner.html')
+
+def anonimizar_telefone(telefone):
+    telefone = str(telefone)
+    if len(telefone) >= 4:
+        return telefone[:4] + '*****' + telefone[-2:]
+    return telefone
+
+
+def anonimizar_cpf(cpf):
+    cpf = str(cpf)
+    if len(cpf) >= 6:
+        return cpf[:3] + '*****' + cpf[-3:]
+    return cpf
+
+
+
 # Create your views here.
+
 
