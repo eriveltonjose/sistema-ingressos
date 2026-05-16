@@ -22,6 +22,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils import timezone
+from django.contrib.auth.decorators import login_required
 
 def anonimizar_telefone(telefone):
     telefone = str(telefone or '')
@@ -155,6 +156,7 @@ def comprar_ingresso(request, evento_id):
             'disponiveis': disponiveis
         }
     )
+
 def ingresso_sucesso(request, ingresso_id):
 
     ingresso = get_object_or_404(Ingresso, id=ingresso_id)
@@ -174,6 +176,7 @@ def ingresso_sucesso(request, ingresso_id):
         'qr_code': qr_base64
     })
 
+@login_required
 def ingressos_vendidos(request):
 
     evento_id = request.GET.get('evento')
@@ -704,6 +707,7 @@ def webhook_asaas(request):
     return JsonResponse({'status': 'ok'})  
 
 
+@login_required
 def checkin_scanner(request):
     return render(request, 'ingressos/checkin_scanner.html')
 

@@ -34,6 +34,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['192.168.15.3', '127.0.0.1','ingressos.e-especialista.org.br', '200.98.64.121']
 
+LOGIN_URL = '/admin/login/'
+
 
 # Application definition
 
