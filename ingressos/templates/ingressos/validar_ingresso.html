@@ -1,75 +1,246 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
     <meta charset="UTF-8">
-    <title>Validacao</title>
+    <title>Check-in do Evento</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 
     <style>
 
-        body{
-            font-family: Arial;
-            background:#f4f6f9;
-            padding:40px;
-            text-align:center;
+        *{
+            box-sizing: border-box;
         }
 
-        .box{
-            background:white;
-            padding:30px;
-            max-width:600px;
-            margin:auto;
-            border-radius:10px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
 
-        .ok{
-            color:green;
-            font-size:28px;
-            font-weight:bold;
-            margin-bottom:20px;
+        .card {
+            width: 100%;
+            max-width: 520px;
+            background: #ffffff;
+            border-radius: 22px;
+            padding: 25px 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            text-align: center;
         }
 
-        .erro{
-            color:red;
-            font-size:28px;
-            font-weight:bold;
-            margin-bottom:20px;
+        h1 {
+            margin: 0;
+            font-size: 32px;
+            color: #111;
         }
 
-        h2{
-            margin-top:20px;
+        p {
+            margin-top: 12px;
+            font-size: 16px;
+            color: #555;
+            line-height: 1.5;
         }
 
-        p{
-            font-size:18px;
+        #reader {
+            width: 100%;
+            min-height: 430px;
+            margin-top: 25px;
+            border: 3px dashed #0d6efd;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin-top: 18px;
+            border-radius: 14px;
+            border: none;
+            font-size: 17px;
+            font-weight: bold;
+            text-decoration: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-primary {
+            background: #0d6efd;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0b5ed7;
+        }
+
+        .status {
+            margin-top: 18px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #198754;
+        }
+
+        /* MOBILE */
+
+        @media (max-width: 768px) {
+
+            body {
+                padding: 0;
+                margin: 0;
+                background: #ffffff;
+                display: block;
+                min-height: 100vh;
+            }
+
+            .card {
+                width: 100vw;
+                max-width: none;
+                min-height: 100vh;
+                border-radius: 0;
+                padding: 24px 14px;
+                box-shadow: none;
+            }
+
+            h1 {
+                font-size: 30px;
+                margin-top: 10px;
+            }
+
+            p {
+                font-size: 17px;
+                margin-bottom: 18px;
+            }
+
+            #reader {
+                width: 100%;
+                height: 70vh;
+                min-height: 520px;
+                margin-top: 25px;
+                border: 3px solid #0d6efd;
+                border-radius: 18px;
+                overflow: hidden;
+                background: #000;
+            }
+
+            #reader video {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: cover !important;
+            }
+
+            #reader__scan_region {
+                min-height: 520px !important;
+            }
+
+            #reader img {
+                max-width: 120px !important;
+            }
+
+            .btn {
+                padding: 18px;
+                font-size: 18px;
+                margin-top: 18px;
+            }
         }
 
     </style>
-
 </head>
 
 <body>
 
-<div class="box">
+<div class="card">
 
-    <div class="{{ tipo }}">
-        {{ status }}
-    </div>
-
-    <h2>{{ ingresso.evento.nome }}</h2>
+    <h1>Check-in do Evento</h1>
 
     <p>
-        <strong>Nome:</strong>
-        {{ ingresso.nome_comprador }}
+        Aponte a câmera para o QR Code do ingresso.
     </p>
 
-    <p>
-        <strong>CPF:</strong>
-        {{ ingresso.cpf }}
-    </p>
+    <div id="reader"></div>
+
+    <div id="status" class="status"></div>
+
+    <a href="/vendidos/" class="btn btn-primary">
+        Ver painel de vendidos
+    </a>
 
 </div>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<script>
+
+    function onScanSuccess(decodedText) {
+
+        document.getElementById("status").innerHTML =
+            "QR Code lido. Validando ingresso...";
+
+        window.location.href = decodedText;
+    }
+
+    const html5QrCode = new Html5Qrcode("reader");
+
+    Html5Qrcode.getCameras()
+    .then(cameras => {
+
+        if (cameras && cameras.length) {
+
+            // Usa preferencialmente câmera traseira
+            let cameraId = cameras[cameras.length - 1].id;
+
+            html5QrCode.start(
+                cameraId,
+                {
+                    fps: 15,
+
+                    qrbox: function(viewfinderWidth, viewfinderHeight) {
+
+                        let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+
+                        let qrboxSize = Math.floor(minEdge * 0.92);
+
+                        return {
+                            width: qrboxSize,
+                            height: qrboxSize
+                        };
+                    },
+
+                    aspectRatio: 1.0
+                },
+
+                onScanSuccess
+            );
+
+            ).catch(err => {
+
+                document.getElementById("status").innerHTML =
+                    "Erro ao iniciar câmera.";
+
+            });
+
+        } else {
+
+            document.getElementById("status").innerHTML =
+                "Nenhuma câmera encontrada.";
+
+        }
+
+    })
+
+    .catch(err => {
+
+        document.getElementById("status").innerHTML =
+            "Permita o acesso à câmera para iniciar o check-in.";
+
+    });
+
+</script>
 
 </body>
 </html>
