@@ -23,7 +23,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
-
+from datetime import datetime
+import requests
 def anonimizar_telefone(telefone):
     telefone = str(telefone or '')
 
@@ -54,61 +55,14 @@ def comprar_ingresso(request, evento_id):
     disponiveis = evento.quantidade_total - vendidos
 
     if request.method == 'POST':
-
         nome = request.POST.get('nome')
         email = request.POST.get('email')
         telefone = request.POST.get('telefone')
         cpf = request.POST.get('cpf')
         quantidade = int(request.POST.get('quantidade', 1))
 
-        if quantidade > disponiveis:
-            messages.error(
-                request,
-                f'Quantidade indisponivel. Restam apenas {disponiveis} ingresso(s).'
-            )
-
-            return render(
-                request,
-                'ingressos/comprar_ingresso.html',
-                {
-                    'evento': evento,
-                    'disponiveis': disponiveis
-                }
-            )
-
-
-        return render(
-            request,
-            'ingressos/comprar_ingresso.html',
-            {
-                'evento': evento,
-                'disponiveis': disponiveis
-            }
-        )
-
-    return render(
-        request,
-        'ingressos/comprar_ingresso.html',
-        {
-            'evento': evento,
-            'disponiveis': disponiveis
-        }
-    )
-
-def comprar_ingresso(request, evento_id):
-
-    evento = get_object_or_404(Evento, id=evento_id)
-
-    vendidos = Ingresso.objects.filter(evento=evento).count()
-    disponiveis = evento.quantidade_total - vendidos
-
-    if request.method == 'POST':
-
-        nome = request.POST.get('nome')
-        email = request.POST.get('email')
-        telefone = request.POST.get('telefone')
-        cpf = request.POST.get('cpf')
-        quantidade = int(request.POST.get('quantidade', 1))
+        forma_pagamento = request.POST.get('forma_pagamento', 'PIX')
+        parcelas = int(request.POST.get('parcelas', 1))
 
         if quantidade > disponiveis:
             messages.error(
@@ -127,11 +81,15 @@ def comprar_ingresso(request, evento_id):
 
         valor_total = evento.valor * quantidade
 
-        pagamento = criar_pagamento_asaas(
-            nome,
-            email,
-            cpf,
-            valor_total
+        dados_pagamento = criar_pagamento_asaas(
+            nome=nome,
+            cpf=cpf,
+            email=email,
+            telefone=telefone,
+            valor_total=valor_total,
+            descricao=evento.nome,
+            forma_pagamento=forma_pagamento,
+            parcelas=parcelas
         )
 
         Pedido.objects.create(
@@ -142,11 +100,11 @@ def comprar_ingresso(request, evento_id):
             cpf=cpf,
             quantidade=quantidade,
             valor_total=valor_total,
-            asaas_payment_id=pagamento['payment_id'],
+            asaas_payment_id=dados_pagamento['id'],
             status='PENDENTE'
         )
 
-        return redirect(pagamento['invoiceUrl'])
+        return redirect(dados_pagamento['invoiceUrl'])
 
     return render(
         request,
@@ -611,7 +569,16 @@ Obrigado!
 
     email.send()
 
-def criar_pagamento_asaas(nome, email, cpf, valor):
+def criar_pagamento_asaas(
+    nome,
+    cpf,
+    email,
+    telefone,
+    valor_total,
+    descricao,
+    forma_pagamento='PIX',
+    parcelas=1
+):
 
     headers = {
         'accept': 'application/json',
@@ -621,17 +588,18 @@ def criar_pagamento_asaas(nome, email, cpf, valor):
 
     cliente = {
         "name": nome,
+        "cpfCnpj": cpf,
         "email": email,
-        "cpfCnpj": cpf
+        "mobilePhone": telefone
     }
 
-    resposta_cliente = requests.post(
-        f"{settings.ASAAS_BASE_URL}/customers",
+    response_cliente = requests.post(
+        f'{settings.ASAAS_BASE_URL}/customers',
         json=cliente,
         headers=headers
     )
 
-    dados_cliente = resposta_cliente.json()
+    dados_cliente = response_cliente.json()
 
     if 'id' not in dados_cliente:
         raise Exception(f"Erro ao criar cliente no Asaas: {dados_cliente}")
@@ -640,27 +608,44 @@ def criar_pagamento_asaas(nome, email, cpf, valor):
 
     cobranca = {
         "customer": customer_id,
-        "billingType": "CREDIT_CARD",
-        "value": float(valor),
-        "dueDate": "2026-12-30",
-        "description": "Ingresso Evento"
+        "billingType": forma_pagamento,
+        "value": float(valor_total),
+        "dueDate": datetime.now().strftime('%Y-%m-%d'),
+        "description": descricao
     }
 
-    resposta_pagamento = requests.post(
-        f"{settings.ASAAS_BASE_URL}/payments",
+    if forma_pagamento == 'CREDIT_CARD' and parcelas > 1:
+        cobranca["installmentCount"] = parcelas
+        cobranca["installmentValue"] = round(float(valor_total) / parcelas, 2)
+
+    response_pagamento = requests.post(
+        f'{settings.ASAAS_BASE_URL}/payments',
         json=cobranca,
         headers=headers
     )
 
-    dados_pagamento = resposta_pagamento.json()
+    dados_pagamento = response_pagamento.json()
 
-    if 'invoiceUrl' not in dados_pagamento or 'id' not in dados_pagamento:
-        raise Exception(f"Erro ao criar cobrança no Asaas: {dados_pagamento}")
+    if 'id' not in dados_pagamento:
+        raise Exception(f"Erro ao criar pagamento no Asaas: {dados_pagamento}")
 
-    return {
-        'invoiceUrl': dados_pagamento['invoiceUrl'],
-        'payment_id': dados_pagamento['id']
-    }
+    return dados_pagamento
+@login_required
+def checkin_scanner(request):
+    return render(request, 'ingressos/checkin_scanner.html')
+
+def anonimizar_telefone(telefone):
+    telefone = str(telefone)
+    if len(telefone) >= 4:
+        return telefone[:4] + '*****' + telefone[-2:]
+    return telefone
+
+
+def anonimizar_cpf(cpf):
+    cpf = str(cpf)
+    if len(cpf) >= 6:
+        return cpf[:3] + '*****' + cpf[-3:]
+    return cpf
 
 @csrf_exempt
 def webhook_asaas(request):
@@ -704,27 +689,7 @@ def webhook_asaas(request):
             ingressos_para_email = Ingresso.objects.filter(id__in=ingressos_criados)
             enviar_email_ingressos(ingressos_para_email, pedido.email)
 
-    return JsonResponse({'status': 'ok'})  
-
-
-@login_required
-def checkin_scanner(request):
-    return render(request, 'ingressos/checkin_scanner.html')
-
-def anonimizar_telefone(telefone):
-    telefone = str(telefone)
-    if len(telefone) >= 4:
-        return telefone[:4] + '*****' + telefone[-2:]
-    return telefone
-
-
-def anonimizar_cpf(cpf):
-    cpf = str(cpf)
-    if len(cpf) >= 6:
-        return cpf[:3] + '*****' + cpf[-3:]
-    return cpf
-
-
+    return JsonResponse({'status': 'ok'})
 
 # Create your views here.
 

@@ -141,6 +141,24 @@
                 font-size:16px;
             }
         }
+
+        .total-box{
+            background:#f1f5ff;
+            border-left:5px solid #0d6efd;
+            padding:14px;
+            border-radius:8px;
+            font-weight:bold;
+            margin-bottom:18px;
+        }
+
+        select{
+            width:100%;
+            padding:14px;
+            margin-bottom:18px;
+            border:1px solid #ccc;
+            border-radius:8px;
+            font-size:16px;
+        }
     </style>
 </head>
 
@@ -173,6 +191,7 @@
         <label>Quantidade de ingressos</label>
         <input
             type="number"
+            id="quantidade"
             name="quantidade"
             min="1"
             max="{{ disponiveis }}"
@@ -217,9 +236,33 @@
             required
         >
 
-        {% if disponiveis > 0 %}
+       
+
+        <div class="total-box">
+            Valor total: R$ <span id="valor-total">{{ evento.valor }}</span>
+        </div>
+
+        <label>Escolha a forma de pagamento abaixo</label>
+        <select name="forma_pagamento" id="forma_pagamento" required>
+            <option value="PIX">Pix</option>
+            <option value="CREDIT_CARD">Cartão de crédito</option>
+        </select>
+
+        <div id="parcelas-box" style="display:none;">
+            <label>Parcelamento</label>
+            <select name="parcelas" id="parcelas">
+                <option value="1">1x sem juros</option>
+                <option value="2">2x sem juros</option>
+                <option value="3">3x sem juros</option>
+                <option value="4">4x sem juros</option>
+                <option value="5">5x sem juros</option>
+                <option value="6">6x sem juros</option>
+            </select>
+        </div>
+
+         {% if disponiveis > 0 %}
             <button type="submit">
-                Finalizar compra
+                Fazer Pagamento
             </button>
         {% else %}
             <button type="button" disabled>
@@ -231,6 +274,34 @@
     <a href="/" class="voltar">← Voltar para eventos</a>
 
 </div>
+
+<script>
+    const valorIngresso = parseFloat("{{ evento.valor }}".replace(",", "."));
+    const quantidade = document.getElementById("quantidade");
+    const valorTotal = document.getElementById("valor-total");
+    const formaPagamento = document.getElementById("forma_pagamento");
+    const parcelasBox = document.getElementById("parcelas-box");
+
+    function atualizarTotal(){
+        let qtd = parseInt(quantidade.value || 1);
+        let total = valorIngresso * qtd;
+        valorTotal.innerText = total.toFixed(2).replace(".", ",");
+    }
+
+    quantidade.addEventListener("input", atualizarTotal);
+
+    formaPagamento.addEventListener("change", function(){
+        if(this.value === "CREDIT_CARD"){
+            parcelasBox.style.display = "block";
+        } else {
+            parcelasBox.style.display = "none";
+        }
+    });
+
+    atualizarTotal();
+
+    
+</script>
 
 </body>
 </html>
