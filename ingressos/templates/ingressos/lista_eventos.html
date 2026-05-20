@@ -145,13 +145,29 @@
                 font-size:24px;
                 font-weight:600;
             }
+	.descricao-evento{
+	    font-size:22px;
+	    line-height:1.8;
+    	    text-align:center;
+    	    margin-bottom:22px;
+    	    width:100%;
+	}
 
-            .descricao-evento{
-                font-size:22px;
-                line-height:1.6;
-                text-align:center;
-                margin-bottom:22px;
-            }
+	.descricao-evento *{
+    	    text-align:center !important;
+	}
+
+	.descricao-evento br{
+    	    display:block;
+    	    margin-bottom:12px;
+    	    content:"";
+	}
+
+    	.local-evento{
+      	    text-align:center;
+            font-size:22px;
+            line-height:1.6;
+    	}			
         }
     </style>
 
@@ -179,9 +195,9 @@
             {{ evento.descricao|linebreaksbr }}
         </div>
 
-        <p>
-            <strong>Local:</strong>
-            {{ evento.local }}
+        <p class="local-evento">
+    	    <strong>Local:</strong>
+    	    {{ evento.local }}	
         </p>
 
         <p class="valor-evento">
