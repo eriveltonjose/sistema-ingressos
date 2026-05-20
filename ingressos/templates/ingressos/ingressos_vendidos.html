@@ -178,6 +178,8 @@
         <th>Telefone</th>
         <th>CPF</th>
         <th>Status</th>
+        <th>Data Compra</th>
+        <th>Hora Compra</th>
     </tr>
 
     {% for ingresso in ingressos %}
@@ -192,19 +194,63 @@
 
         <td>{{ ingresso.telefone_anonimo }}</td>
 
-	<td>{{ ingresso.cpf_anonimo }}</td>
+        <td>{{ ingresso.cpf_anonimo }}</td>
 
         <td>
-
             {% if ingresso.usado %}
                 <span class="erro">Utilizado</span>
             {% else %}
                 <span class="ok">Valido</span>
             {% endif %}
-
         </td>
 
+        <td>{{ ingresso.criado_em|date:"d/m/Y" }}</td>
+
+        <td>{{ ingresso.criado_em|time:"H:i" }}</td>
+
     </tr>
+
+    {% endfor %}
+
+</table>
+
+<h2 style="margin-top:50px; text-align:center;">
+    Relatório de Utilização
+</h2>
+
+<table>
+
+    <tr>
+        <th>Evento</th>
+        <th>Nome</th>
+        <th>CPF</th>
+        <th>Data Utilização</th>
+        <th>Hora Utilização</th>
+    </tr>
+
+    {% for ingresso in ingressos %}
+
+        {% if ingresso.usado %}
+
+        <tr>
+
+            <td>{{ ingresso.evento.nome }}</td>
+
+            <td>{{ ingresso.nome_comprador }}</td>
+
+            <td>{{ ingresso.cpf_anonimo }}</td>
+
+            <td>
+                {{ ingresso.data_checkin|date:"d/m/Y" }}
+            </td>
+
+            <td>
+                {{ ingresso.data_checkin|time:"H:i" }}
+            </td>
+
+        </tr>
+
+        {% endif %}
 
     {% endfor %}
 
