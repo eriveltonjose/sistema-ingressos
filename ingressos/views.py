@@ -25,6 +25,8 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from datetime import datetime
 import requests
+
+
 def anonimizar_telefone(telefone):
     telefone = str(telefone or '')
 
@@ -171,6 +173,7 @@ def ingressos_vendidos(request):
     )
 
 
+@login_required
 def validar_ingresso(request, codigo):
 
     ingresso = get_object_or_404(
