@@ -31,6 +31,8 @@ class Ingresso(models.Model):
 
     usado = models.BooleanField(default=False)
     data_checkin = models.DateTimeField(null=True, blank=True)
+    cancelado = models.BooleanField(default=False)
+    data_cancelamento = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

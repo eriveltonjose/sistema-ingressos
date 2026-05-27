@@ -26,7 +26,6 @@ from django.contrib.auth.decorators import login_required
 from datetime import datetime
 import requests
 
-
 def anonimizar_telefone(telefone):
     telefone = str(telefone or '')
 
@@ -157,6 +156,8 @@ def ingressos_vendidos(request):
 
     total_utilizados = ingressos.filter(usado=True).count()
 
+    total_cancelados = ingressos.filter(cancelado=True).count()
+
     total_validos = ingressos.filter(usado=False).count()
 
     return render(
@@ -168,7 +169,9 @@ def ingressos_vendidos(request):
             'evento_id': evento_id,
             'total_vendidos': total_vendidos,
             'total_utilizados': total_utilizados,
+            'total_cancelados': total_cancelados,
             'total_validos': total_validos
+            
         }
     )
 
@@ -180,6 +183,17 @@ def validar_ingresso(request, codigo):
         Ingresso,
         codigo=codigo
     )
+
+    if ingresso.cancelado:
+
+        return render(
+            request,
+            'ingressos/checkin_resultado.html',
+            {
+                'status': 'cancelado',
+                'ingresso': ingresso
+            }
+        )
 
     if ingresso.usado:
 
