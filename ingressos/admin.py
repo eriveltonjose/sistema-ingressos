@@ -13,6 +13,7 @@ class IngressoAdmin(admin.ModelAdmin):
         'evento',
         'codigo',
         'usado',
+        'cancelado',
         'criado_em'
     )
 

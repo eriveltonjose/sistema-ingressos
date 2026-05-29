@@ -158,7 +158,7 @@ def ingressos_vendidos(request):
 
     total_cancelados = ingressos.filter(cancelado=True).count()
 
-    total_validos = ingressos.filter(usado=False).count()
+    total_validos = total_vendidos - total_cancelados
 
     return render(
         request,
@@ -683,9 +683,22 @@ def webhook_asaas(request):
 
     if evento_asaas in ['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED']:
 
-        pedido = Pedido.objects.filter(asaas_payment_id=payment_id).first()
+        pedido = Pedido.objects.filter(
+            asaas_payment_id=payment_id
+        ).first()
 
-        if pedido and pedido.status != 'PAGO':
+        # Ignora pagamentos que não pertencem ao sistema de ingressos
+        if not pedido:
+            print(
+                f"Webhook Asaas ignorado. "
+                f"Pagamento não pertence ao sistema: {payment_id}"
+            )
+            return JsonResponse({
+                'status': 'ignorado',
+                'motivo': 'pagamento nao pertence ao sistema de ingressos'
+            })
+
+        if pedido.status != 'PAGO':
 
             ingressos_criados = []
 
@@ -703,8 +716,14 @@ def webhook_asaas(request):
             pedido.status = 'PAGO'
             pedido.save()
 
-            ingressos_para_email = Ingresso.objects.filter(id__in=ingressos_criados)
-            enviar_email_ingressos(ingressos_para_email, pedido.email)
+            ingressos_para_email = Ingresso.objects.filter(
+                id__in=ingressos_criados
+            )
+
+            enviar_email_ingressos(
+                ingressos_para_email,
+                pedido.email
+            )
 
     return JsonResponse({'status': 'ok'})
 
