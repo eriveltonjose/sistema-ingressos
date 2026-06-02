@@ -407,19 +407,25 @@ def exportar_csv(request):
     ])
 
     for ingresso in ingressos:
+    	if ingresso.cancelado:
+            status = 'Cancelado'
+    	elif ingresso.usado:
+            status = 'Utilizado'
+    	else:
+            status = 'Valido'
 
-        status = 'Utilizado' if ingresso.usado else 'Valido'
+    	data_local = timezone.localtime(ingresso.criado_em)
 
-        writer.writerow([
+    	writer.writerow([
             ingresso.evento.nome,
             ingresso.nome_comprador,
             ingresso.email,
             ingresso.telefone,
             ingresso.cpf,
             status,
-	    ingresso.criado_em.strftime('%d/%m/%Y'),
-	    ingresso.criado_em.strftime('%H:%M')	
-        ])
+            data_local.strftime('%d/%m/%Y'),
+            data_local.strftime('%H:%M')
+    	])
 
     return response
 def testar_email(request):
