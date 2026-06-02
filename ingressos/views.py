@@ -116,6 +116,7 @@ def comprar_ingresso(request, evento_id):
         }
     )
 
+@login_required
 def ingresso_sucesso(request, ingresso_id):
 
     ingresso = get_object_or_404(Ingresso, id=ingresso_id)
@@ -400,7 +401,9 @@ def exportar_csv(request):
         'Email',
         'Telefone',
         'CPF',
-        'Status'
+        'Status',
+	'Data Compra',
+	'Hora Compra'
     ])
 
     for ingresso in ingressos:
@@ -413,7 +416,9 @@ def exportar_csv(request):
             ingresso.email,
             ingresso.telefone,
             ingresso.cpf,
-            status
+            status,
+	    ingresso.criado_em.strftime('%d/%m/%Y'),
+	    ingresso.criado_em.strftime('%H:%M')	
         ])
 
     return response
