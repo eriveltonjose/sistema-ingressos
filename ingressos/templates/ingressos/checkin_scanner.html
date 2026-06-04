@@ -78,47 +78,63 @@
 
 <script>
     let jaLeu = false;
+    let html5QrCode = null;
 
-    function sucesso(decodedText, decodedResult) {
+    function extrairCodigo(decodedText) {
+        let texto = decodedText.trim();
+
+        if (texto.includes("/validar/")) {
+            texto = texto.split("/validar/")[1];
+        }
+
+        texto = texto.split("?")[0].replaceAll("/", "").trim();
+        return texto;
+    }
+
+    function sucesso(decodedText) {
         if (jaLeu) return;
+
+        const codigo = extrairCodigo(decodedText);
+
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+        if (!uuidRegex.test(codigo)) {
+            document.getElementById("resultado").innerHTML =
+                '<div class="erro">QR Code inválido.</div>';
+            return;
+        }
+
         jaLeu = true;
 
         document.getElementById("resultado").innerHTML =
             '<div class="ok">QR Code lido com sucesso! Redirecionando...</div>';
 
-        let codigo = decodedText.trim();
-
-        // Se vier URL completa, pega apenas o UUID no final
-        if (codigo.includes("/validar/")) {
-            codigo = codigo.split("/validar/")[1].replaceAll("/", "");
-        }
-
-        // Se vier só o UUID, monta a URL correta
-        const destino = "/validar/" + codigo + "/";
-
-        setTimeout(function(){
-            window.location.href = destino;
-        }, 500);
+        html5QrCode.stop().then(() => {
+            window.location.href = "/validar/" + codigo + "/";
+        });
     }
 
-    function erro(errorMessage) {
-        // ignora erros de leitura contínua
+    function iniciarScanner() {
+        html5QrCode = new Html5Qrcode("reader");
+
+        html5QrCode.start(
+            { facingMode: "environment" },
+            {
+                fps: 10,
+                qrbox: { width: 280, height: 280 },
+                aspectRatio: 1.0
+            },
+            sucesso,
+            function(errorMessage) {
+                // ignora erros de leitura contínua
+            }
+        ).catch(function(err) {
+            document.getElementById("resultado").innerHTML =
+                '<div class="erro">Não foi possível acessar a câmera. Verifique a permissão do navegador.</div>';
+        });
     }
 
-    const scanner = new Html5QrcodeScanner(
-        "reader",
-        {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            rememberLastUsedCamera: true,
-            supportedScanTypes: [
-                Html5QrcodeScanType.SCAN_TYPE_CAMERA
-            ]
-        },
-        false
-    );
-
-    scanner.render(sucesso, erro);
+    window.onload = iniciarScanner;
 </script>
 
 </body>
