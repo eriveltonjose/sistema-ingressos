@@ -9,21 +9,30 @@
             font-family: Arial;
             background:#f4f6f9;
             text-align:center;
-            padding:20px;
+            padding:0;
+            margin:0;
         }
 
         .box{
-            max-width:500px;
-            margin:auto;
+            width:100%;
+            max-width:none;
+            min-height:100vh;
             background:white;
-            padding:25px;
-            border-radius:12px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+            padding:15px;
+            box-sizing:border-box;
         }
 
         #reader{
             width:100%;
-            margin-top:20px;
+            max-width:100%;
+            margin-top:10px;
+        }
+
+        #reader video{
+            width:100% !important;
+            height:75vh !important;
+            object-fit:cover;
+            border-radius:12px;
         }
 
         .ok{
@@ -121,7 +130,14 @@
             { facingMode: "environment" },
             {
                 fps: 10,
-                qrbox: { width: 360, height: 360 },
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    const qrboxSize = Math.floor(minEdge * 0.85);
+                    return {
+                        width: qrboxSize,
+                        height: qrboxSize
+                    };
+                },
                 aspectRatio: 0.75
             },
             sucesso,
