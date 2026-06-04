@@ -32,7 +32,7 @@ SECRET_KEY = 'django-insecure-3i1ejbv$-*7ak91h4$yyzw$u%0kg3o=x(jx75(t2taezz8xcqu
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.15.3', '127.0.0.1','ingressos.e-especialista.org.br', '200.98.64.121','10.1.1.23']
+ALLOWED_HOSTS = ['192.168.15.3', '127.0.0.1', 'localhost', 'ingressos.e-especialista.org.br', '200.98.64.121', '10.1.1.23', '10.1.0.77']
 
 LOGIN_URL = '/admin/login/'
 

@@ -77,14 +77,28 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <script>
+    let jaLeu = false;
+
     function sucesso(decodedText, decodedResult) {
+        if (jaLeu) return;
+        jaLeu = true;
 
         document.getElementById("resultado").innerHTML =
             '<div class="ok">QR Code lido com sucesso! Redirecionando...</div>';
 
+        let codigo = decodedText.trim();
+
+        // Se vier URL completa, pega apenas o UUID no final
+        if (codigo.includes("/validar/")) {
+            codigo = codigo.split("/validar/")[1].replaceAll("/", "");
+        }
+
+        // Se vier só o UUID, monta a URL correta
+        const destino = "/validar/" + codigo + "/";
+
         setTimeout(function(){
-            window.location.href = decodedText;
-        }, 800);
+            window.location.href = destino;
+        }, 500);
     }
 
     function erro(errorMessage) {
@@ -95,8 +109,13 @@
         "reader",
         {
             fps: 10,
-            qrbox: 250
-        }
+            qrbox: { width: 250, height: 250 },
+            rememberLastUsedCamera: true,
+            supportedScanTypes: [
+                Html5QrcodeScanType.SCAN_TYPE_CAMERA
+            ]
+        },
+        false
     );
 
     scanner.render(sucesso, erro);
