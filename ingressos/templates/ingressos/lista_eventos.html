@@ -163,12 +163,79 @@
     	    content:"";
 	}
 
-    	.local-evento{
+    .local-evento{
       	    text-align:center;
             font-size:22px;
             line-height:1.6;
-    	}			
+    }
+    }
+    
+    .opcoes-ingresso{
+        display:flex;
+        justify-content:center;
+        align-items:stretch;
+        gap:24px;
+        margin-top:34px;
+    }
+
+    .opcao{
+        flex:1;
+        max-width:300px;
+        text-align:center;
+    }
+
+    .opcao-titulo{
+        font-size:22px;
+        font-weight:bold;
+        margin-bottom:12px;
+    }
+
+    .opcao-valor{
+        font-size:24px;
+        font-weight:bold;
+        margin-bottom:18px;
+    }
+
+    .btn-associado,
+    .btn-nao-associado{
+        display:block;
+        color:white;
+        text-decoration:none;
+        text-align:center;
+        padding:20px;
+        font-size:26px;
+        font-weight:bold;
+        border-radius:14px;
+    }
+
+    .btn-associado{
+        background:#198754;
+    }
+
+    .btn-associado:hover{
+        background:#157347;
+    }
+
+    .btn-nao-associado{
+        background:#0d6efd;
+    }
+
+    .btn-nao-associado:hover{
+        background:#0b5ed7;
+    }
+
+    @media (max-width:768px){
+        .opcoes-ingresso{
+            flex-direction:column;
+            gap:18px;
         }
+
+        .opcao{
+            max-width:100%;
+            width:100%;
+        }
+    }
+
     </style>
 
 </head>
@@ -179,7 +246,6 @@
 
     <h1>Eventos Disponíveis</h1>
 
-    
 {% for evento in eventos %}
 
     {% if evento.banner %}
@@ -196,21 +262,40 @@
         </div>
 
         <p class="local-evento">
-    	    <strong>Local:</strong>
-    	    {{ evento.local }}	
+            <strong>Local:</strong>
+            {{ evento.local }}
         </p>
 
-        <p class="valor-evento">
-            <strong>Valor:</strong> R$ {{ evento.valor }}
-        </p>
+        <div class="opcoes-ingresso">
 
-        <a href="/comprar/{{ evento.id }}/" class="btn">
-            Comprar Ingresso
-        </a>
+            <div class="opcao">
+                <div class="opcao-titulo">Associado AMBr</div>
+
+                <div class="opcao-valor">
+                    R$ {{ evento.valor_associado }}
+                </div>
+
+                <a href="/associado/{{ evento.id }}/" class="btn-associado">
+                    Associado AMBr
+                </a>
+            </div>
+
+            <div class="opcao">
+                <div class="opcao-titulo">Não Associado</div>
+
+                <div class="opcao-valor">
+                    R$ {{ evento.valor_nao_associado }}
+                </div>
+
+                <a href="/comprar/{{ evento.id }}/?tipo=nao_associado" class="btn-nao-associado">
+                    Não Associado
+                </a>
+            </div>
+
+        </div>
     </div>
 
 {% endfor %}
-
 
 </div>
 

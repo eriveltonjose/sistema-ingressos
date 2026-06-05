@@ -8,7 +8,21 @@ class Evento(models.Model):
     data = models.DateTimeField()
     local = models.CharField(max_length=200)
     valor = models.DecimalField(max_digits=8, decimal_places=2)
+
+    valor_associado = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0
+    )
+
+    valor_nao_associado = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0
+    )
+
     quantidade_total = models.PositiveIntegerField()
+
     banner = models.ImageField(upload_to='eventos/', blank=True, null=True)
 	
 
@@ -58,4 +72,15 @@ class Pedido(models.Model):
 
     def __str__(self):
         return f"{self.nome} - {self.evento.nome} - {self.status}"
-# Create your models here.
+class ValidacaoAssociado(models.Model):
+    cpf = models.CharField(max_length=14)
+    nome = models.CharField(max_length=200)
+    crm = models.CharField(max_length=30, blank=True)
+    email = models.EmailField()
+    telefone = models.CharField(max_length=30, blank=True)
+    codigo = models.CharField(max_length=6)
+    confirmado = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nome} - {self.cpf}"

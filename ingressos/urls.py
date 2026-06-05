@@ -13,4 +13,18 @@ urlpatterns = [
     path('testar-email/', views.testar_email, name='testar_email'),
     path('webhook/asaas/', views.webhook_asaas, name='webhook_asaas'),
     path('checkin/', views.checkin_scanner, name='checkin_scanner'),
+
+    path('associado/<int:evento_id>/', views.validar_associado, name='validar_associado'),
+
+    path(
+        'confirmar-codigo/<int:evento_id>/',
+        views.confirmar_codigo,
+        name='confirmar_codigo'
+    ),
+
+    path(
+        'enviar-codigo/<int:evento_id>/',
+        views.enviar_codigo,
+        name='enviar_codigo'
+    ),
 ]

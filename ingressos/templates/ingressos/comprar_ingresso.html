@@ -123,6 +123,27 @@
             font-weight:bold;
         }
 
+        .dados-associado{
+            background:#f0fff4;
+            border:2px solid #198754;
+            border-radius:12px;
+            padding:20px;
+            margin-bottom:25px;
+        }
+
+        .dados-associado h3{
+            color:#198754;
+            text-align:center;
+            margin-top:0;
+            margin-bottom:20px;
+        }
+
+        .dados-associado p{
+            text-align:left;
+            margin:10px 0;
+            font-size:18px;
+        }
+
         @media (max-width: 768px){
             body{
                 padding:18px 12px;
@@ -199,11 +220,66 @@
             required
         >
 
+        {% if associado_validado %}
+
+        <div class="dados-associado">
+
+            <h3>✅ Associado Validado</h3>
+
+            <p>
+                <strong>Nome:</strong>
+                {{ nome_associado }}
+            </p>
+
+            <p>
+                <strong>E-mail:</strong>
+                {{ email_associado }}
+            </p>
+
+            <p>
+                <strong>Telefone:</strong>
+                {{ telefone_associado }}
+            </p>
+
+            <p>
+                <strong>CPF:</strong>
+                {{ cpf_associado }}
+            </p>
+
+        </div>
+
+        <input
+            type="hidden"
+            name="nome"
+            value="{{ nome_associado }}"
+        >
+
+        <input
+            type="hidden"
+            name="email"
+            value="{{ email_associado }}"
+        >
+
+        <input
+            type="hidden"
+            name="telefone"
+            value="{{ telefone_associado }}"
+        >
+
+        <input
+            type="hidden"
+            name="cpf"
+            value="{{ cpf_associado }}"
+        >
+
+        {% else %}
+
         <label>Nome completo</label>
         <input
             type="text"
             name="nome"
             placeholder="Digite seu nome"
+            value="{{ nome_associado }}"
             required
         >
 
@@ -212,6 +288,7 @@
             type="email"
             name="email"
             placeholder="Digite seu e-mail"
+            value="{{ email_associado }}"
             required
         >
 
@@ -222,6 +299,7 @@
             placeholder="Somente números"
             inputmode="numeric"
             pattern="[0-9]+"
+            value="{{ telefone_associado }}"
             required
         >
 
@@ -232,14 +310,17 @@
             placeholder="Somente números"
             maxlength="11"
             pattern="[0-9]{11}"
+            value="{{ cpf_associado }}"
             inputmode="numeric"
             required
         >
 
+        {% endif %}
+
        
 
         <div class="total-box">
-            Valor total: R$ <span id="valor-total">{{ evento.valor }}</span>
+            Valor total: R$ <span id="valor-total">{{ valor_unitario }}</span>
         </div>
 
         <label>Escolha a forma de pagamento abaixo</label>
@@ -276,7 +357,7 @@
 </div>
 
 <script>
-    const valorIngresso = parseFloat("{{ evento.valor }}".replace(",", "."));
+    const valorIngresso = parseFloat("{{ valor_unitario }}".replace(",", "."));
     const quantidade = document.getElementById("quantidade");
     const valorTotal = document.getElementById("valor-total");
     const formaPagamento = document.getElementById("forma_pagamento");

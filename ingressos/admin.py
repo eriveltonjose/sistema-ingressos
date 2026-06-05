@@ -1,7 +1,7 @@
 from django.contrib import admin
-from django.contrib import admin
-from .models import Evento, Ingresso
-from .models import Evento, Ingresso, Pedido
+from .models import Evento, Ingresso, Pedido, ValidacaoAssociado
+
+admin.site.register(ValidacaoAssociado)
 
 admin.site.register(Evento)
 

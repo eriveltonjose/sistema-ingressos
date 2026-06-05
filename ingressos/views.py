@@ -17,13 +17,15 @@ from django.core.mail import send_mail
 from django.conf import settings
 import requests
 from django.conf import settings
-from .models import Evento, Ingresso, Pedido
+from .models import Evento, Ingresso, Pedido, ValidacaoAssociado
+import random
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from datetime import datetime
+from django.shortcuts import render, get_object_or_404
 import requests
 
 def anonimizar_telefone(telefone):
@@ -47,13 +49,154 @@ def lista_eventos(request):
     eventos = Evento.objects.all()
     return render(request, 'ingressos/lista_eventos.html', {'eventos': eventos})
 
+def validar_associado(request, evento_id):
+    evento = get_object_or_404(Evento, id=evento_id)
+
+    if request.method == "POST":
+
+        cpf = request.POST.get("cpf")
+
+        associado = {
+            "nome": "Erivelton José de Barcelos",
+            "crm": "12345",
+            "email": "erivelton.jose@gmail.com",
+            "telefone": "61996630739",
+            "status": "ATIVO",
+            "financeiro": "ADIMPLENTE"
+        }
+
+        return render(
+            request,
+            "ingressos/validar_associado.html",
+            {
+                "evento": evento,
+                "associado": associado
+            }
+        )
+
+    return render(
+        request,
+        "ingressos/validar_associado.html",
+        {
+            "evento": evento
+        }
+    )
+
+import random
+
+def enviar_codigo(request, evento_id):
+
+    evento = get_object_or_404(Evento, id=evento_id)
+
+    codigo = str(random.randint(100000, 999999))
+
+    validacao = ValidacaoAssociado.objects.create(
+        cpf='12345678900',
+        nome='Erivelton José de Barcelos',
+        crm='12345',
+        email='erivelton.jose@gmail.com',
+        telefone='61999887766',
+        codigo=codigo,
+        confirmado=False
+    )
+
+    print(f'CODIGO GERADO: {codigo}')
+    send_mail(
+        'Código de validação - Compra de ingresso AMBr',
+        f'''
+    Olá, {validacao.nome}.
+
+    Seu código de validação é:
+
+    {codigo}
+
+    Digite este código na tela de confirmação para continuar sua compra.
+
+    AMBr
+    ''',
+        settings.DEFAULT_FROM_EMAIL,
+        [validacao.email],
+        fail_silently=False,
+    )
+
+    return render(
+        request,
+        'ingressos/confirmar_codigo.html',
+        {
+            'evento': evento,
+            'validacao_id': validacao.id
+        }
+    )
+
+
+def confirmar_codigo(request, evento_id):
+
+    evento = get_object_or_404(Evento, id=evento_id)
+
+    if request.method == "POST":
+
+        codigo_digitado = request.POST.get("codigo")
+
+        validacao = ValidacaoAssociado.objects.filter(
+            codigo=codigo_digitado,
+            confirmado=False
+        ).first()
+
+        if validacao:
+
+            validacao.confirmado = True
+            validacao.save()
+
+            request.session['associado_validado'] = True
+            request.session['associado_nome'] = validacao.nome
+            request.session['associado_email'] = validacao.email
+            request.session['associado_telefone'] = validacao.telefone
+            request.session['associado_cpf'] = validacao.cpf
+            request.session['associado_crm'] = validacao.crm
+
+            messages.success(
+                request,
+                "Código validado com sucesso."
+            )
+
+            return redirect(f"/comprar/{evento.id}/")
+
+    return render(
+        request,
+        "ingressos/confirmar_codigo.html",
+        {
+            "evento": evento
+        }
+    )
 
 def comprar_ingresso(request, evento_id):
 
     evento = get_object_or_404(Evento, id=evento_id)
 
+    if request.GET.get('tipo') == 'nao_associado':
+        request.session.pop('associado_validado', None)
+        request.session.pop('associado_nome', None)
+        request.session.pop('associado_email', None)
+        request.session.pop('associado_telefone', None)
+        request.session.pop('associado_cpf', None)
+        request.session.pop('associado_crm', None)
+
+    associado_validado = request.session.get('associado_validado', False)
+
+    if associado_validado:
+        valor_unitario = evento.valor_associado
+    else:
+        valor_unitario = evento.valor_nao_associado
+
     vendidos = Ingresso.objects.filter(evento=evento).count()
     disponiveis = evento.quantidade_total - vendidos
+
+    if request.GET.get('tipo') == 'associado' and not associado_validado:
+        messages.error(
+            request,
+            'Valide seu cadastro antes de comprar como associado.'
+        )
+        return redirect(f'/associado/{evento.id}/')
 
     if request.method == 'POST':
         nome = request.POST.get('nome')
@@ -76,11 +219,17 @@ def comprar_ingresso(request, evento_id):
                 'ingressos/comprar_ingresso.html',
                 {
                     'evento': evento,
-                    'disponiveis': disponiveis
+                    'disponiveis': disponiveis,
+                    'associado_validado': associado_validado,
+                    'nome_associado': request.session.get('associado_nome', ''),
+                    'email_associado': request.session.get('associado_email', ''),
+                    'telefone_associado': request.session.get('associado_telefone', ''),
+                    'cpf_associado': request.session.get('associado_cpf', ''),
+                    'valor_unitario': valor_unitario,
                 }
             )
 
-        valor_total = evento.valor * quantidade
+        valor_total = valor_unitario * quantidade
 
         dados_pagamento = criar_pagamento_asaas(
             nome=nome,
@@ -112,7 +261,13 @@ def comprar_ingresso(request, evento_id):
         'ingressos/comprar_ingresso.html',
         {
             'evento': evento,
-            'disponiveis': disponiveis
+            'disponiveis': disponiveis,
+            'associado_validado': associado_validado,
+            'nome_associado': request.session.get('associado_nome', ''),
+            'email_associado': request.session.get('associado_email', ''),
+            'telefone_associado': request.session.get('associado_telefone', ''),
+            'cpf_associado': request.session.get('associado_cpf', ''),
+            'valor_unitario': valor_unitario,
         }
     )
 
