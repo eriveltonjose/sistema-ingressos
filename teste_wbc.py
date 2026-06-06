@@ -3,7 +3,7 @@ import requests
 url = "http://189.90.139.178:2020/AMBR/wsCpfValidos.rule?sys=WBC"
 
 payload = {
-    "cpf": "21499594704",
+    "cpf": "26193841687",
     "tipo": "01"
 }
 

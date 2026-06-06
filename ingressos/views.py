@@ -45,6 +45,31 @@ def anonimizar_cpf(cpf):
 
     return cpf
 
+def mascarar_email(email):
+    if not email or "@" not in email:
+        return "Não informado"
+
+    usuario, dominio = email.split("@", 1)
+
+    if len(usuario) <= 4:
+        usuario_masc = usuario[:1] + "***"
+    else:
+        usuario_masc = usuario[:4] + "***"
+
+    return f"{usuario_masc}@{dominio}"
+
+
+def mascarar_telefone(telefone):
+    if not telefone:
+        return "Não informado"
+
+    telefone = ''.join(filter(str.isdigit, str(telefone)))
+
+    if len(telefone) < 4:
+        return "Não informado"
+
+    return telefone[:4] + "****" + telefone[-2:]
+
 def lista_eventos(request):
     eventos = Evento.objects.all()
     return render(request, 'ingressos/lista_eventos.html', {'eventos': eventos})
@@ -70,6 +95,7 @@ def consultar_associado_wbc(cpf):
 
 def validar_associado(request, evento_id):
     evento = get_object_or_404(Evento, id=evento_id)
+
     list(messages.get_messages(request))
 
     if request.method == "POST":
@@ -78,7 +104,7 @@ def validar_associado(request, evento_id):
         try:
             dados = consultar_associado_wbc(cpf)
 
-        except Exception as erro:
+        except Exception:
             messages.error(
                 request,
                 "Não foi possível consultar o cadastro no momento. Tente novamente."
@@ -126,13 +152,23 @@ def validar_associado(request, evento_id):
                 }
             )
 
+        email = dados.get("email") or ""
+        telefone = dados.get("celular") or ""
         associado = {
             "nome": dados.get("nome", ""),
             "crm": dados.get("tipo", ""),
-            "email": dados.get("email", ""),
-            "telefone": dados.get("celular", ""),
+            "email": mascarar_email(email),
+            "telefone": mascarar_telefone(telefone),
             "cpf": dados.get("cpf", cpf),
         }
+
+        request.session['wbc_nome'] = associado['nome']
+        request.session['wbc_tipo'] = associado['crm']
+
+        request.session['wbc_email'] = email
+        request.session['wbc_telefone'] = telefone
+
+        request.session['wbc_cpf'] = associado['cpf']
 
         return render(
             request,
@@ -158,14 +194,15 @@ def enviar_codigo(request, evento_id):
     codigo = str(random.randint(100000, 999999))
 
     validacao = ValidacaoAssociado.objects.create(
-        cpf='12345678900',
-        nome='Erivelton José de Barcelos',
-        crm='12345',
-        email='erivelton.jose@gmail.com',
-        telefone='61999887766',
+        cpf=request.session.get('wbc_cpf', ''),
+        nome=request.session.get('wbc_nome', ''),
+        crm=request.session.get('wbc_tipo', ''),
+        email=request.session.get('wbc_email', ''),
+        telefone=request.session.get('wbc_telefone', ''),
         codigo=codigo,
         confirmado=False
     )
+    
 
     print(f'CODIGO GERADO: {codigo}')
     send_mail(
