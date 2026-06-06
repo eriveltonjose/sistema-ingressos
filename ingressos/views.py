@@ -161,6 +161,13 @@ def confirmar_codigo(request, evento_id):
 
             return redirect(f"/comprar/{evento.id}/")
 
+        else:
+
+            messages.error(
+                request,
+                "Código inválido ou já utilizado."
+            )
+
     return render(
         request,
         "ingressos/confirmar_codigo.html",
@@ -248,6 +255,7 @@ def comprar_ingresso(request, evento_id):
             email=email,
             telefone=telefone,
             cpf=cpf,
+            associado=associado_validado,
             quantidade=quantidade,
             valor_total=valor_total,
             asaas_payment_id=dados_pagamento['id'],
@@ -553,12 +561,13 @@ def exportar_csv(request):
     writer.writerow([
         'Evento',
         'Nome',
+        'Associado'
         'Email',
         'Telefone',
         'CPF',
         'Status',
-	'Data Compra',
-	'Hora Compra'
+	    'Data Compra',
+	    'Hora Compra'
     ])
 
     for ingresso in ingressos:
@@ -574,6 +583,7 @@ def exportar_csv(request):
     	writer.writerow([
             ingresso.evento.nome,
             ingresso.nome_comprador,
+            'S' if ingresso.associado else 'N',
             ingresso.email,
             ingresso.telefone,
             ingresso.cpf,
@@ -874,7 +884,8 @@ def webhook_asaas(request):
                     nome_comprador=pedido.nome,
                     email=pedido.email,
                     telefone=pedido.telefone,
-                    cpf=pedido.cpf
+                    cpf=pedido.cpf,
+                    associado=pedido.associado,
                 )
 
                 ingressos_criados.append(ingresso.id)

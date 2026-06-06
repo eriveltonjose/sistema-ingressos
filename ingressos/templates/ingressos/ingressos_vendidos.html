@@ -200,6 +200,7 @@
     <tr>
         <th>Evento</th>
         <th>Nome</th>
+        <th>Associado</th>
         <th>Email</th>
         <th>Telefone</th>
         <th>CPF</th>
@@ -215,6 +216,14 @@
         <td>{{ ingresso.evento.nome }}</td>
 
         <td>{{ ingresso.nome_comprador }}</td>
+
+        <td>
+            {% if ingresso.associado %}
+                <strong style="color:green;">S</strong>
+            {% else %}
+                <strong style="color:red;">N</strong>
+            {% endif %}
+        </td>
 
         <td>{{ ingresso.email }}</td>
 

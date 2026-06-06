@@ -36,6 +36,7 @@ class Ingresso(models.Model):
     email = models.EmailField()
     telefone = models.CharField(max_length=30)
     cpf = models.CharField(max_length=14)
+    associado = models.BooleanField(default=False)
 
     codigo = models.UUIDField(
         default=uuid.uuid4,
@@ -64,6 +65,7 @@ class Pedido(models.Model):
     email = models.EmailField()
     telefone = models.CharField(max_length=30)
     cpf = models.CharField(max_length=14)
+    associado = models.BooleanField(default=False)
     quantidade = models.PositiveIntegerField(default=1)
     valor_total = models.DecimalField(max_digits=10, decimal_places=2)
     asaas_payment_id = models.CharField(max_length=100, blank=True, null=True)
