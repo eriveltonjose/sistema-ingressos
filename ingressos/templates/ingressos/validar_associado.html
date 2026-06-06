@@ -78,6 +78,16 @@
             margin-bottom:25px;
         }
 
+        .mensagem{
+            background:#f8d7da;
+            color:#842029;
+            padding:15px;
+            border-radius:10px;
+            margin-bottom:20px;
+            text-align:center;
+            font-weight:bold;
+        }
+
     </style>
 
 </head>
@@ -92,6 +102,14 @@
         <div class="evento">
             {{ evento.nome }}
         </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mensagem">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
 
         {% if associado %}
 

@@ -49,20 +49,89 @@ def lista_eventos(request):
     eventos = Evento.objects.all()
     return render(request, 'ingressos/lista_eventos.html', {'eventos': eventos})
 
+def consultar_associado_wbc(cpf):
+    url = "http://189.90.139.178:2020/AMBR/wsCpfValidos.rule?sys=WBC"
+
+    payload = {
+        "cpf": cpf,
+        "tipo": "01"
+    }
+
+    resposta = requests.get(url, json=payload, timeout=30)
+
+    try:
+        return resposta.json()
+    except Exception:
+        return {
+            "situacao": "Erro",
+            "mensagem": "Não foi possível interpretar a resposta da WBC.",
+            "json": {}
+        }
+
 def validar_associado(request, evento_id):
     evento = get_object_or_404(Evento, id=evento_id)
+    list(messages.get_messages(request))
 
     if request.method == "POST":
+        cpf = request.POST.get("cpf", "").replace(".", "").replace("-", "").strip()
 
-        cpf = request.POST.get("cpf")
+        try:
+            dados = consultar_associado_wbc(cpf)
+
+        except Exception as erro:
+            messages.error(
+                request,
+                "Não foi possível consultar o cadastro no momento. Tente novamente."
+            )
+
+            return render(
+                request,
+                "ingressos/validar_associado.html",
+                {
+                    "evento": evento
+                }
+            )
+
+        if not dados.get("associado"):
+            messages.error(
+                request,
+                dados.get(
+                    "mensagem",
+                    "CPF não localizado no quadro de associados da AMBr."
+                )
+            )
+
+            return render(
+                request,
+                "ingressos/validar_associado.html",
+                {
+                    "evento": evento
+                }
+            )
+
+        if dados.get("pendencias"):
+            messages.error(
+                request,
+                dados.get(
+                    "mensagem",
+                    "Identificamos pendência no cadastro. Procure a secretaria da AMBr."
+                )
+            )
+
+            return render(
+                request,
+                "ingressos/validar_associado.html",
+                {
+                    "evento": evento
+                }
+            )
 
         associado = {
-            "nome": "Erivelton José de Barcelos",
-            "crm": "12345",
-            "email": "erivelton.jose@gmail.com",
-            "telefone": "61996630739",
-            "status": "ATIVO",
-            "financeiro": "ADIMPLENTE"
+            "nome": dados.get("nome", ""),
+            "crm": dados.get("tipo", ""),
+            "email": dados.get("email", ""),
+            "telefone": dados.get("celular", ""),
+            "cpf": dados.get("cpf", cpf),
         }
 
         return render(
@@ -81,8 +150,6 @@ def validar_associado(request, evento_id):
             "evento": evento
         }
     )
-
-import random
 
 def enviar_codigo(request, evento_id):
 
