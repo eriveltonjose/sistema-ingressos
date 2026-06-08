@@ -422,6 +422,10 @@ def ingressos_vendidos(request):
 
     total_vendidos = ingressos.count()
 
+    total_associados = ingressos.filter(associado=True).count()
+
+    total_nao_associados = ingressos.filter(associado=False).count()
+
     total_utilizados = ingressos.filter(usado=True).count()
 
     total_cancelados = ingressos.filter(cancelado=True).count()
@@ -436,6 +440,8 @@ def ingressos_vendidos(request):
             'eventos': eventos,
             'evento_id': evento_id,
             'total_vendidos': total_vendidos,
+            'total_associados': total_associados,
+            'total_nao_associados': total_nao_associados,
             'total_utilizados': total_utilizados,
             'total_cancelados': total_cancelados,
             'total_validos': total_validos
