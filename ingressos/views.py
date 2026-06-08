@@ -407,6 +407,7 @@ def ingresso_sucesso(request, ingresso_id):
 def ingressos_vendidos(request):
 
     evento_id = request.GET.get('evento')
+    filtro = request.GET.get('filtro')
 
     eventos = Evento.objects.all()
 
@@ -415,22 +416,32 @@ def ingressos_vendidos(request):
     if evento_id:
         ingressos = ingressos.filter(evento_id=evento_id)
 
+    total_vendidos = ingressos.count()
+    total_associados = ingressos.filter(associado=True).count()
+    total_nao_associados = ingressos.filter(associado=False).count()
+    total_utilizados = ingressos.filter(usado=True).count()
+    total_cancelados = ingressos.filter(cancelado=True).count()
+    total_validos = total_vendidos - total_cancelados
+
+    if filtro == 'associados':
+        ingressos = ingressos.filter(associado=True)
+
+    elif filtro == 'nao_associados':
+        ingressos = ingressos.filter(associado=False)
+
+    elif filtro == 'utilizados':
+        ingressos = ingressos.filter(usado=True)
+
+    elif filtro == 'cancelados':
+        ingressos = ingressos.filter(cancelado=True)
+
+    elif filtro == 'validos':
+        ingressos = ingressos.filter(cancelado=False)
+
     # ANONIMIZAR DADOS
     for ingresso in ingressos:
         ingresso.telefone_anonimo = anonimizar_telefone(ingresso.telefone)
         ingresso.cpf_anonimo = anonimizar_cpf(ingresso.cpf)
-
-    total_vendidos = ingressos.count()
-
-    total_associados = ingressos.filter(associado=True).count()
-
-    total_nao_associados = ingressos.filter(associado=False).count()
-
-    total_utilizados = ingressos.filter(usado=True).count()
-
-    total_cancelados = ingressos.filter(cancelado=True).count()
-
-    total_validos = total_vendidos - total_cancelados
 
     return render(
         request,
@@ -439,13 +450,13 @@ def ingressos_vendidos(request):
             'ingressos': ingressos,
             'eventos': eventos,
             'evento_id': evento_id,
+            'filtro': filtro,
             'total_vendidos': total_vendidos,
             'total_associados': total_associados,
             'total_nao_associados': total_nao_associados,
             'total_utilizados': total_utilizados,
             'total_cancelados': total_cancelados,
             'total_validos': total_validos
-            
         }
     )
 
@@ -657,40 +668,55 @@ def exportar_csv(request):
 
     evento_id = request.GET.get('evento')
 
-    ingressos = Ingresso.objects.all()
+    ingressos = Ingresso.objects.all().order_by('-criado_em')
 
     if evento_id and evento_id != 'Nome':
         ingressos = ingressos.filter(evento_id=evento_id)
 
-    response = HttpResponse(content_type='text/csv')
+    total_vendidos = ingressos.count()
+    total_associados = ingressos.filter(associado=True).count()
+    total_nao_associados = ingressos.filter(associado=False).count()
+    total_utilizados = ingressos.filter(usado=True).count()
+    total_cancelados = ingressos.filter(cancelado=True).count()
+    total_validos = total_vendidos - total_cancelados
 
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="ingressos.csv"'
 
     writer = csv.writer(response)
 
+    writer.writerow(['Resumo'])
+    writer.writerow(['Total Vendidos', total_vendidos])
+    writer.writerow(['Total Associados', total_associados])
+    writer.writerow(['Total Não Associados', total_nao_associados])
+    writer.writerow(['Total Utilizados', total_utilizados])
+    writer.writerow(['Total Cancelados', total_cancelados])
+    writer.writerow(['Total Válidos', total_validos])
+    writer.writerow([])
+
     writer.writerow([
         'Evento',
         'Nome',
-        'Associado'
+        'Associado',
         'Email',
         'Telefone',
         'CPF',
         'Status',
-	    'Data Compra',
-	    'Hora Compra'
+        'Data Compra',
+        'Hora Compra'
     ])
 
     for ingresso in ingressos:
-    	if ingresso.cancelado:
+        if ingresso.cancelado:
             status = 'Cancelado'
-    	elif ingresso.usado:
+        elif ingresso.usado:
             status = 'Utilizado'
-    	else:
+        else:
             status = 'Valido'
 
-    	data_local = timezone.localtime(ingresso.criado_em)
+        data_local = timezone.localtime(ingresso.criado_em)
 
-    	writer.writerow([
+        writer.writerow([
             ingresso.evento.nome,
             ingresso.nome_comprador,
             'S' if ingresso.associado else 'N',
@@ -700,7 +726,7 @@ def exportar_csv(request):
             status,
             data_local.strftime('%d/%m/%Y'),
             data_local.strftime('%H:%M')
-    	])
+        ])
 
     return response
 def testar_email(request):
