@@ -296,11 +296,22 @@ def comprar_ingresso(request, evento_id):
 
     if associado_validado:
         valor_unitario = evento.valor_associado
+        limite_ingressos = evento.quantidade_associado
+        vendidos_tipo = Ingresso.objects.filter(
+            evento=evento,
+            associado=True,
+            cancelado=False
+        ).count()
     else:
         valor_unitario = evento.valor_nao_associado
+        limite_ingressos = evento.quantidade_nao_associado
+        vendidos_tipo = Ingresso.objects.filter(
+            evento=evento,
+            associado=False,
+            cancelado=False
+        ).count()
 
-    vendidos = Ingresso.objects.filter(evento=evento).count()
-    disponiveis = evento.quantidade_total - vendidos
+    disponiveis = limite_ingressos - vendidos_tipo
 
     if request.GET.get('tipo') == 'associado' and not associado_validado:
         messages.error(
@@ -322,7 +333,7 @@ def comprar_ingresso(request, evento_id):
         if quantidade > disponiveis:
             messages.error(
                 request,
-                f'Quantidade indisponivel. Restam apenas {disponiveis} ingresso(s).'
+                f'Quantidade indisponível. Restam apenas {disponiveis} ingresso(s) para esta modalidade.'
             )
 
             return render(
@@ -363,6 +374,7 @@ def comprar_ingresso(request, evento_id):
             quantidade=quantidade,
             valor_total=valor_total,
             asaas_payment_id=dados_pagamento['id'],
+            forma_pagamento=forma_pagamento,
             status='PENDENTE'
         )
 
@@ -388,7 +400,9 @@ def ingresso_sucesso(request, ingresso_id):
 
     ingresso = get_object_or_404(Ingresso, id=ingresso_id)
 
-    url_validacao = f"http://192.168.15.3:8000/validar/{ingresso.codigo}/"
+    url_validacao = request.build_absolute_uri(
+    f"/validar/{ingresso.codigo}/"
+    )
 
     qr = qrcode.make(url_validacao)
 
@@ -423,6 +437,14 @@ def ingressos_vendidos(request):
     total_cancelados = ingressos.filter(cancelado=True).count()
     total_validos = total_vendidos - total_cancelados
 
+    total_pix = ingressos.filter(
+        forma_pagamento='PIX'
+    ).count()
+
+    total_cartao = ingressos.filter(
+        forma_pagamento='CREDIT_CARD'
+    ).count()
+
     if filtro == 'associados':
         ingressos = ingressos.filter(associado=True)
 
@@ -437,6 +459,16 @@ def ingressos_vendidos(request):
 
     elif filtro == 'validos':
         ingressos = ingressos.filter(cancelado=False)
+
+    elif filtro == 'pix':
+        ingressos = ingressos.filter(
+            forma_pagamento='PIX'
+        )
+
+    elif filtro == 'cartao':
+        ingressos = ingressos.filter(
+            forma_pagamento='CREDIT_CARD'
+        )    
 
     # ANONIMIZAR DADOS
     for ingresso in ingressos:
@@ -454,6 +486,8 @@ def ingressos_vendidos(request):
             'total_vendidos': total_vendidos,
             'total_associados': total_associados,
             'total_nao_associados': total_nao_associados,
+            'total_pix': total_pix,
+            'total_cartao': total_cartao,
             'total_utilizados': total_utilizados,
             'total_cancelados': total_cancelados,
             'total_validos': total_validos
@@ -1022,6 +1056,7 @@ def webhook_asaas(request):
                     telefone=pedido.telefone,
                     cpf=pedido.cpf,
                     associado=pedido.associado,
+                    forma_pagamento=pedido.forma_pagamento,
                 )
 
                 ingressos_criados.append(ingresso.id)

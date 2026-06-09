@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 import uuid
 
 
@@ -23,11 +24,23 @@ class Evento(models.Model):
 
     quantidade_total = models.PositiveIntegerField()
 
+    quantidade_associado = models.PositiveIntegerField(default=0)
+
+    quantidade_nao_associado = models.PositiveIntegerField(default=0)
+
     banner = models.ImageField(upload_to='eventos/', blank=True, null=True)
 	
 
     def __str__(self):
         return self.nome
+    
+    def clean(self):
+        total_cotas = self.quantidade_associado + self.quantidade_nao_associado
+
+        if total_cotas > self.quantidade_total:
+            raise ValidationError(
+                'A soma de Quantidade associado + Quantidade não associado não pode ser maior que a Quantidade total.'
+            )
 
 
 class Ingresso(models.Model):
@@ -37,6 +50,11 @@ class Ingresso(models.Model):
     telefone = models.CharField(max_length=30)
     cpf = models.CharField(max_length=14)
     associado = models.BooleanField(default=False)
+    forma_pagamento = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True
+    )
 
     codigo = models.UUIDField(
         default=uuid.uuid4,
@@ -70,6 +88,11 @@ class Pedido(models.Model):
     valor_total = models.DecimalField(max_digits=10, decimal_places=2)
     asaas_payment_id = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDENTE')
+    forma_pagamento = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -32,11 +32,11 @@
 
         .card{
             background:white;
-            padding:28px;
+            padding:18px;
             border-radius:10px;
             box-shadow:0 2px 10px rgba(0,0,0,0.1);
             text-align:center;
-            min-height:100px;
+            min-height:70px;
             transition:0.2s;
         }
 
@@ -167,6 +167,7 @@
         </div>
     </a>
 
+    
     <a class="card-link" href="?{% if evento_id %}evento={{ evento_id }}&{% endif %}filtro=utilizados">
         <div class="card">
             <p>✅ Total Utilizados</p>
@@ -185,6 +186,20 @@
         <div class="card">
             <p>🟢 Total Válidos</p>
             <div class="numero" style="color:green;">{{ total_validos }}</div>
+        </div>
+    </a>
+
+    <a class="card-link" href="?{% if evento_id %}evento={{ evento_id }}&{% endif %}filtro=pix">
+        <div class="card">
+            <p>⚡ Pix</p>
+            <div class="numero" style="color:#8a2be2;">{{ total_pix }}</div>
+        </div>
+    </a>
+
+    <a class="card-link" href="?{% if evento_id %}evento={{ evento_id }}&{% endif %}filtro=cartao">
+        <div class="card">
+            <p>💳 Cartão de Crédito</p>
+            <div class="numero" style="color:#20b2aa;">{{ total_cartao }}</div>
         </div>
     </a>
 
@@ -234,6 +249,7 @@
         <th>Status</th>
         <th>Data Compra</th>
         <th>Hora Compra</th>
+        <th>Pagamento</th>
     </tr>
 
     {% for ingresso in ingressos %}
@@ -283,6 +299,16 @@
         <td>{{ ingresso.criado_em|date:"d/m/Y" }}</td>
 
         <td>{{ ingresso.criado_em|time:"H:i" }}</td>
+
+        <td>
+            {% if ingresso.forma_pagamento == 'PIX' %}
+                Pix
+            {% elif ingresso.forma_pagamento == 'CREDIT_CARD' %}
+                Cartão de Crédito
+            {% else %}
+                Não informado
+            {% endif %}
+        </td>
 
     </tr>
 
