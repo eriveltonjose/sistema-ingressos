@@ -431,18 +431,29 @@ def ingressos_vendidos(request):
         ingressos = ingressos.filter(evento_id=evento_id)
 
     total_vendidos = ingressos.count()
-    total_associados = ingressos.filter(associado=True).count()
-    total_nao_associados = ingressos.filter(associado=False).count()
+
+    total_associados = ingressos.filter(
+        associado=True,
+        cancelado=False
+    ).count()
+
+    total_nao_associados = ingressos.filter(
+        associado=False,
+        cancelado=False
+    ).count()
+
     total_utilizados = ingressos.filter(usado=True).count()
     total_cancelados = ingressos.filter(cancelado=True).count()
     total_validos = total_vendidos - total_cancelados
 
     total_pix = ingressos.filter(
-        forma_pagamento='PIX'
+        forma_pagamento='PIX',
+        cancelado=False
     ).count()
 
     total_cartao = ingressos.filter(
-        forma_pagamento='CREDIT_CARD'
+        forma_pagamento='CREDIT_CARD',
+        cancelado=False
     ).count()
 
     if filtro == 'associados':
