@@ -28,6 +28,11 @@ class Evento(models.Model):
 
     quantidade_nao_associado = models.PositiveIntegerField(default=0)
 
+    ativo = models.BooleanField(
+        default=True,
+        verbose_name="Evento aberto para vendas"
+    )
+
     banner = models.ImageField(upload_to='eventos/', blank=True, null=True)
 	
 

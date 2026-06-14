@@ -284,6 +284,13 @@ def comprar_ingresso(request, evento_id):
 
     evento = get_object_or_404(Evento, id=evento_id)
 
+    if not evento.ativo:
+        messages.error(
+            request,
+            'As vendas deste evento foram encerradas.'
+        )
+        return redirect('lista_eventos')
+
     if request.GET.get('tipo') == 'nao_associado':
         request.session.pop('associado_validado', None)
         request.session.pop('associado_nome', None)

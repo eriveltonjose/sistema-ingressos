@@ -224,6 +224,19 @@
         background:#0b5ed7;
     }
 
+    .evento-encerrado {
+        display: block;
+        width: 100%;
+        background: #dc3545;
+        color: #fff;
+        text-align: center;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: bold;
+        margin-top: 10px;
+        box-sizing: border-box;
+    }
+
     @media (max-width:768px){
         .opcoes-ingresso{
             flex-direction:column;
@@ -275,9 +288,15 @@
                     R$ {{ evento.valor_associado }}
                 </div>
 
-                <a href="/associado/{{ evento.id }}/" class="btn-associado">
-                    Associado AMBr
-                </a>
+                {% if evento.ativo %}
+                    <a href="/comprar/{{ evento.id }}/?tipo=nao_associado" class="btn-nao-associado">
+                        Não Associado
+                    </a>
+                {% else %}
+                    <button class="btn-nao-associado" disabled>
+                        🔒 Vendas Encerradas
+                    </button>
+                {% endif %}
             </div>
 
             <div class="opcao">
@@ -287,9 +306,15 @@
                     R$ {{ evento.valor_nao_associado }}
                 </div>
 
-                <a href="/comprar/{{ evento.id }}/?tipo=nao_associado" class="btn-nao-associado">
-                    Não Associado
-                </a>
+                {% if evento.ativo %}
+                    <a href="/comprar/{{ evento.id }}/?tipo=nao_associado" class="btn-nao-associado">
+                        Não Associado
+                    </a>
+                {% else %}
+                    <button class="btn-nao-associado" disabled>
+                        🔒 Vendas Encerradas
+                    </button>
+                {% endif %}
             </div>
 
         </div>
