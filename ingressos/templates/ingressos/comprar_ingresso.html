@@ -209,7 +209,40 @@
     <form method="POST">
         {% csrf_token %}
 
+        {% if evento.exclusivo_associado %}
+
+        <div class="beneficio-associado">
+
+            {% if primeira_compra %}
+                <h3>🎟️ Benefício da primeira compra</h3>
+
+                <p>
+                    Nesta primeira compra, você pagará por
+                    <strong>1 ingresso</strong> e receberá
+                    <strong>{{ quantidade_prevista }} convites</strong>.
+                </p>
+            {% else %}
+                <h3>🎟️ Compra adicional</h3>
+
+                <p>
+                    Como você já utilizou o benefício da primeira compra,
+                    será gerado <strong>{{ quantidade_prevista }} ingresso</strong>.
+                </p>
+            {% endif %}
+
+        </div>
+
+        <input
+            type="hidden"
+            id="quantidade"
+            name="quantidade"
+            value="1"
+        >
+
+    {% else %}
+
         <label>Quantidade de ingressos</label>
+
         <input
             type="number"
             id="quantidade"
@@ -219,6 +252,8 @@
             value="1"
             required
         >
+
+    {% endif %}
 
         {% if associado_validado %}
 

@@ -33,6 +33,36 @@ class Evento(models.Model):
         verbose_name="Evento aberto para vendas"
     )
 
+    ativo = models.BooleanField(
+        default=True,
+        verbose_name="Evento aberto para vendas"
+    )
+
+    exclusivo_associado = models.BooleanField(
+        default=False,
+        verbose_name='Evento exclusivo para associados'
+    )
+
+    beneficio_primeira_compra = models.BooleanField(
+        default=False,
+        verbose_name='Gerar 2 ingressos na primeira compra'
+    )
+
+    quantidade_primeira_compra = models.PositiveIntegerField(
+        default=2,
+        verbose_name='Ingressos na primeira compra'
+    )
+
+    quantidade_compras_seguintes = models.PositiveIntegerField(
+        default=1,
+        verbose_name='Ingressos nas compras seguintes'
+    )
+
+    banner = models.ImageField(
+        upload_to='eventos/',
+        blank=True,
+        null=True
+    )
     banner = models.ImageField(upload_to='eventos/', blank=True, null=True)
 	
 
@@ -40,16 +70,50 @@ class Evento(models.Model):
         return self.nome
     
     def clean(self):
-        total_cotas = self.quantidade_associado + self.quantidade_nao_associado
+        quantidade_total = self.quantidade_total or 0
+        quantidade_associado = self.quantidade_associado or 0
+        quantidade_nao_associado = self.quantidade_nao_associado or 0
 
-        if total_cotas > self.quantidade_total:
+        total_cotas = quantidade_associado + quantidade_nao_associado
+
+        if total_cotas > quantidade_total:
             raise ValidationError(
-                'A soma de Quantidade associado + Quantidade não associado não pode ser maior que a Quantidade total.'
+                'A soma de Quantidade associado + Quantidade não associado '
+                'não pode ser maior que a Quantidade total.'
+            )
+
+        if self.exclusivo_associado and quantidade_nao_associado > 0:
+            raise ValidationError(
+                'Um evento exclusivo para associados não pode possuir '
+                'ingressos destinados a não associados.'
+            )
+
+        if (
+            self.quantidade_primeira_compra is not None
+            and self.quantidade_primeira_compra < 1
+        ):
+            raise ValidationError(
+                'A quantidade da primeira compra deve ser pelo menos 1.'
+            )
+
+        if (
+            self.quantidade_compras_seguintes is not None
+            and self.quantidade_compras_seguintes < 1
+        ):
+            raise ValidationError(
+                'A quantidade das compras seguintes deve ser pelo menos 1.'
             )
 
 
 class Ingresso(models.Model):
     evento = models.ForeignKey(Evento, on_delete=models.CASCADE)
+    pedido = models.ForeignKey(
+        'Pedido',
+        on_delete=models.SET_NULL,
+        related_name='ingressos',
+        null=True,
+        blank=True
+    )
     nome_comprador = models.CharField(max_length=200)
     email = models.EmailField()
     telefone = models.CharField(max_length=30)
@@ -91,7 +155,12 @@ class Pedido(models.Model):
     associado = models.BooleanField(default=False)
     quantidade = models.PositiveIntegerField(default=1)
     valor_total = models.DecimalField(max_digits=10, decimal_places=2)
-    asaas_payment_id = models.CharField(max_length=100, blank=True, null=True)
+    asaas_payment_id = models.CharField(
+    max_length=100,
+    blank=True,
+    null=True,
+    unique=True
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDENTE')
     forma_pagamento = models.CharField(
         max_length=30,

@@ -284,38 +284,44 @@
             <div class="opcao">
                 <div class="opcao-titulo">Associado AMBr</div>
 
-                <div class="opcao-valor">
-                    R$ {{ evento.valor_associado }}
+                    <div class="opcao-valor">
+                        R$ {{ evento.valor_associado }}
+                    </div>
+
+                    {% if evento.ativo %}
+                        <a href="/associado/{{ evento.id }}/" class="btn-associado">
+                            Associado AMBr
+                        </a>
+                    {% else %}
+                        <button class="btn-nao-associado" disabled>
+                            🔒 Vendas Encerradas
+                        </button>
+                    {% endif %}
                 </div>
 
-                {% if evento.ativo %}
-                    <a href="/associado/{{ evento.id }}/" class="btn-associado">
-                        Associado AMBr
-                    </a>
-                {% else %}
-                    <button class="btn-nao-associado" disabled>
-                        🔒 Vendas Encerradas
-                    </button>
-                {% endif %}
-            </div>
 
-            <div class="opcao">
-                <div class="opcao-titulo">Não Associado</div>
+                {% if not evento.exclusivo_associado %}
 
-                <div class="opcao-valor">
-                    R$ {{ evento.valor_nao_associado }}
-                </div>
+                    <div class="opcao">
+                        <div class="opcao-titulo">Não Associado</div>
 
-                {% if evento.ativo %}
-                    <a href="/comprar/{{ evento.id }}/?tipo=nao_associado" class="btn-nao-associado">
-                        Não Associado
-                    </a>
-                {% else %}
-                    <button class="btn-nao-associado" disabled>
-                        🔒 Vendas Encerradas
-                    </button>
-                {% endif %}
-            </div>
+                        <div class="opcao-valor">
+                            R$ {{ evento.valor_nao_associado }}
+                        </div>
+
+                        {% if evento.ativo %}
+                            <a href="/comprar/{{ evento.id }}/?tipo=nao_associado"
+                            class="btn-nao-associado">
+                                Não Associado
+                            </a>
+                        {% else %}
+                            <button class="btn-nao-associado" disabled>
+                                🔒 Vendas Encerradas
+                            </button>
+                        {% endif %}
+                    </div>
+
+            {% endif %}
 
         </div>
     </div>
