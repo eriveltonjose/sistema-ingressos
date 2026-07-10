@@ -205,9 +205,7 @@ def confirmar_pagamento_presencial(modeladmin, request, queryset):
                         ).exists()
 
                         if ja_comprou:
-                            quantidade_ingressos = (
-                                evento.quantidade_compras_seguintes
-                            )
+                            quantidade_ingressos = pedido.quantidade
                         else:
                             quantidade_ingressos = (
                                 evento.quantidade_primeira_compra

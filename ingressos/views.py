@@ -363,19 +363,17 @@ def comprar_ingresso(request, evento_id):
     ):
         cpf_validado = request.session.get('associado_cpf', '')
 
-        ja_comprou = Pedido.objects.filter(
+        ja_comprou = Ingresso.objects.filter(
             evento=evento,
             cpf=cpf_validado,
             associado=True,
-            status='PAGO'
+            cancelado=False
         ).exists()
 
         primeira_compra = not ja_comprou
 
         if primeira_compra:
             quantidade_prevista = evento.quantidade_primeira_compra
-        else:
-            quantidade_prevista = evento.quantidade_compras_seguintes
 
     if request.method == 'POST':
 
@@ -386,8 +384,18 @@ def comprar_ingresso(request, evento_id):
             telefone = request.session.get('associado_telefone', '')
             cpf = request.session.get('associado_cpf', '')
 
-            # Cada operação representa uma compra
-            quantidade = 1
+            if primeira_compra:
+                quantidade = 1
+            else:
+                try:
+                    quantidade = int(
+                        request.POST.get('quantidade', 1)
+                    )
+                except (TypeError, ValueError):
+                    quantidade = 1
+
+                if quantidade < 1:
+                    quantidade = 1
 
         else:
             nome = request.POST.get('nome')
@@ -415,7 +423,7 @@ def comprar_ingresso(request, evento_id):
         # No evento especial, verifica o número real de convites
         quantidade_para_estoque = (
             quantidade_prevista
-            if evento.exclusivo_associado
+            if evento.exclusivo_associado and primeira_compra
             else quantidade
         )
 
@@ -1210,9 +1218,7 @@ def webhook_asaas(request):
             ).exists()
 
             if ja_comprou:
-                quantidade_ingressos = (
-                    evento.quantidade_compras_seguintes
-                )
+                quantidade_ingressos = pedido.quantidade
             else:
                 quantidade_ingressos = (
                     evento.quantidade_primeira_compra
