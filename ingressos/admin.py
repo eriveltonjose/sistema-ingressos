@@ -114,23 +114,45 @@ reenviar_ingresso.short_description = '📧 Reenviar ingresso por e-mail'
 class IngressoAdmin(admin.ModelAdmin):
 
     actions = [reenviar_ingresso]
-    
+
     list_display = (
         'id',
         'pedido',
         'nome_comprador',
         'evento',
-        'codigo',
+        'cpf',
+        'associado',
         'usado',
         'cancelado',
-        'criado_em'
+        'criado_em',
+    )
+
+    list_filter = (
+        'evento',
+        'associado',
+        'usado',
+        'cancelado',
+        'criado_em',
     )
 
     search_fields = (
         'nome_comprador',
         'cpf',
-        'codigo'
+        'email',
+        'codigo',
+        'evento__nome',
     )
+
+    ordering = (
+        '-criado_em',
+    )
+
+    list_select_related = (
+        'evento',
+        'pedido',
+    )
+
+    date_hierarchy = 'criado_em'
 
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
@@ -149,10 +171,11 @@ class PedidoAdmin(admin.ModelAdmin):
     )
 
     list_filter = (
+        'evento',
         'status',
         'associado',
-        'evento',
         'forma_pagamento',
+        'criado_em',
     )
 
     search_fields = (
@@ -160,5 +183,16 @@ class PedidoAdmin(admin.ModelAdmin):
         'cpf',
         'email',
         'asaas_payment_id',
+        'evento__nome',
     )
+
+    ordering = (
+        '-criado_em',
+    )
+
+    list_select_related = (
+        'evento',
+    )
+
+    date_hierarchy = 'criado_em'
 # Register your models here.
