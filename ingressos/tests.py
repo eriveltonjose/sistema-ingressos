@@ -1,13 +1,15 @@
 import csv
 from datetime import timedelta
 from io import StringIO
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Evento, Ingresso
+from .models import Evento, Ingresso, Pedido
 
 
 class IngressosVendidosCestaBasicaTests(TestCase):
@@ -176,3 +178,201 @@ class ExportarCsvPagamentoTests(TestCase):
         nomes_exportados = [linha[1] for linha in linhas[9:]]
 
         self.assertEqual(nomes_exportados, ['Ingresso do evento selecionado'])
+
+
+class PedidoAdminCestaBasicaPermissionTests(TestCase):
+    def setUp(self):
+        self.evento = Evento.objects.create(
+            nome='Evento para confirmação presencial',
+            data=timezone.now() + timedelta(days=1),
+            local='Auditório',
+            valor='100.00',
+            valor_associado='80.00',
+            valor_nao_associado='100.00',
+            quantidade_total=100,
+            quantidade_associado=50,
+            quantidade_nao_associado=50,
+        )
+        self.permissao_visualizar = Permission.objects.get(
+            content_type__app_label='ingressos',
+            codename='view_pedido'
+        )
+        self.permissao_cesta_basica = Permission.objects.get(
+            content_type__app_label='ingressos',
+            codename='confirmar_pagamento_cesta_basica'
+        )
+        self.operador = get_user_model().objects.create_user(
+            username='operador-cesta',
+            password='senha-segura',
+            is_staff=True,
+        )
+        self.operador.user_permissions.add(
+            self.permissao_visualizar,
+            self.permissao_cesta_basica,
+        )
+        self.usuario_somente_visualizacao = (
+            get_user_model().objects.create_user(
+                username='somente-visualizacao',
+                password='senha-segura',
+                is_staff=True,
+            )
+        )
+        self.usuario_somente_visualizacao.user_permissions.add(
+            self.permissao_visualizar
+        )
+        self.superusuario = get_user_model().objects.create_superuser(
+            username='superusuario',
+            password='senha-segura',
+            email='superusuario@example.com',
+        )
+        self.lista_pedidos_url = reverse('admin:ingressos_pedido_changelist')
+
+    def criar_pedido(self, status='PENDENTE', quantidade=1):
+        return Pedido.objects.create(
+            evento=self.evento,
+            nome='Comprador presencial',
+            email='comprador@example.com',
+            telefone='11999999999',
+            cpf='12345678901',
+            quantidade=quantidade,
+            valor_total='100.00',
+            status=status,
+        )
+
+    def executar_acao(self, pedido, follow=False):
+        return self.client.post(
+            self.lista_pedidos_url,
+            {
+                'action': 'confirmar_pagamento_presencial',
+                '_selected_action': [pedido.pk],
+            },
+            follow=follow,
+        )
+
+    def test_operador_autorizado_visualiza_os_pedidos(self):
+        pedido = self.criar_pedido()
+        self.client.force_login(self.operador)
+
+        response = self.client.get(self.lista_pedidos_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, pedido.nome)
+
+    def test_operador_autorizado_recebe_a_acao(self):
+        self.criar_pedido()
+        self.client.force_login(self.operador)
+
+        response = self.client.get(self.lista_pedidos_url)
+
+        self.assertContains(response, 'confirmar_pagamento_presencial')
+
+    def test_usuario_com_apenas_view_pedido_nao_recebe_a_acao(self):
+        self.criar_pedido()
+        self.client.force_login(self.usuario_somente_visualizacao)
+
+        response = self.client.get(self.lista_pedidos_url)
+
+        self.assertNotContains(response, 'confirmar_pagamento_presencial')
+
+    def test_requisicao_direta_sem_permissao_nao_confirma_pagamento(self):
+        pedido = self.criar_pedido()
+        self.client.force_login(self.usuario_somente_visualizacao)
+
+        response = self.executar_acao(pedido)
+
+        pedido.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(pedido.status, 'PENDENTE')
+        self.assertFalse(
+            Ingresso.objects.filter(pedido=pedido).exists()
+        )
+
+    def test_operador_nao_pode_editar_adicionar_ou_excluir_pedidos(self):
+        pedido = self.criar_pedido()
+        self.client.force_login(self.operador)
+
+        resposta_edicao = self.client.post(
+            reverse('admin:ingressos_pedido_change', args=[pedido.pk]),
+            {'nome': 'Nome alterado'}
+        )
+        resposta_adicao = self.client.get(
+            reverse('admin:ingressos_pedido_add')
+        )
+        resposta_exclusao = self.client.get(
+            reverse('admin:ingressos_pedido_delete', args=[pedido.pk])
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(resposta_edicao.status_code, 403)
+        self.assertEqual(resposta_adicao.status_code, 403)
+        self.assertEqual(resposta_exclusao.status_code, 403)
+        self.assertEqual(pedido.nome, 'Comprador presencial')
+
+    @patch('ingressos.admin.enviar_email_ingressos')
+    def test_pedido_pendente_e_confirmado(self, enviar_email):
+        pedido = self.criar_pedido(quantidade=2)
+        self.client.force_login(self.operador)
+
+        response = self.executar_acao(pedido)
+
+        pedido.refresh_from_db()
+        ingressos = Ingresso.objects.filter(pedido=pedido)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(pedido.status, 'PAGO')
+        self.assertEqual(pedido.forma_pagamento, 'CESTA_BASICA')
+        self.assertEqual(ingressos.count(), 2)
+        self.assertEqual(
+            ingressos.filter(forma_pagamento='CESTA_BASICA').count(),
+            2
+        )
+        enviar_email.assert_called_once()
+
+    @patch('ingressos.admin.enviar_email_ingressos')
+    def test_pedido_pago_e_ignorado(self, enviar_email):
+        pedido = self.criar_pedido(status='PAGO')
+        self.client.force_login(self.operador)
+
+        response = self.executar_acao(pedido, follow=True)
+
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.status, 'PAGO')
+        self.assertFalse(Ingresso.objects.filter(pedido=pedido).exists())
+        self.assertContains(response, 'pedido(s) ignorado(s)')
+        enviar_email.assert_not_called()
+
+    @patch('ingressos.admin.enviar_email_ingressos')
+    def test_pedido_cancelado_e_ignorado(self, enviar_email):
+        pedido = self.criar_pedido(status='CANCELADO')
+        self.client.force_login(self.operador)
+
+        response = self.executar_acao(pedido, follow=True)
+
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.status, 'CANCELADO')
+        self.assertFalse(Ingresso.objects.filter(pedido=pedido).exists())
+        self.assertContains(response, 'pedido(s) ignorado(s)')
+        enviar_email.assert_not_called()
+
+    @patch('ingressos.admin.enviar_email_ingressos')
+    def test_nao_cria_ingressos_duplicados(self, enviar_email):
+        pedido = self.criar_pedido(quantidade=2)
+        self.client.force_login(self.operador)
+
+        self.executar_acao(pedido)
+        self.executar_acao(pedido)
+
+        self.assertEqual(Ingresso.objects.filter(pedido=pedido).count(), 2)
+        enviar_email.assert_called_once()
+
+    @patch('ingressos.admin.enviar_email_ingressos')
+    def test_superusuario_mantem_acesso_a_acao(self, enviar_email):
+        pedido = self.criar_pedido()
+        self.client.force_login(self.superusuario)
+
+        response = self.client.get(self.lista_pedidos_url)
+        self.executar_acao(pedido)
+
+        pedido.refresh_from_db()
+        self.assertContains(response, 'confirmar_pagamento_presencial')
+        self.assertEqual(pedido.status, 'PAGO')
+        enviar_email.assert_called_once()

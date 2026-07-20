@@ -160,8 +160,23 @@ class IngressoAdmin(admin.ModelAdmin):
 
 def confirmar_pagamento_presencial(modeladmin, request, queryset):
 
+    if not (
+        request.user.is_superuser
+        or request.user.has_perm(
+            'ingressos.confirmar_pagamento_cesta_basica'
+        )
+    ):
+        modeladmin.message_user(
+            request,
+            'Você não possui permissão para confirmar pagamentos '
+            'com cesta básica.',
+            level=messages.ERROR
+        )
+        return
+
     processados = 0
     reenviados = 0
+    ignorados = 0
     erros = 0
 
     for pedido_id in queryset.values_list('id', flat=True):
@@ -175,6 +190,10 @@ def confirmar_pagamento_presencial(modeladmin, request, queryset):
                     .select_related('evento')
                     .get(pk=pedido_id)
                 )
+
+                if pedido.status != 'PENDENTE':
+                    ignorados += 1
+                    continue
 
                 # Evita criar ingressos duplicados
                 ingressos_existentes = list(
@@ -274,6 +293,14 @@ def confirmar_pagamento_presencial(modeladmin, request, queryset):
             level=messages.WARNING
         )
 
+    if ignorados:
+        modeladmin.message_user(
+            request,
+            f'{ignorados} pedido(s) ignorado(s) por já estarem pagos '
+            f'ou cancelados.',
+            level=messages.WARNING
+        )
+
     if erros:
         modeladmin.message_user(
             request,
@@ -284,7 +311,8 @@ def confirmar_pagamento_presencial(modeladmin, request, queryset):
 
 confirmar_pagamento_presencial.short_description = (
     '🎁 Confirmar pagamento presencial e enviar ingressos'
-)    
+)
+confirmar_pagamento_presencial.allowed_permissions = ('view',)
 
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
@@ -331,4 +359,17 @@ class PedidoAdmin(admin.ModelAdmin):
     )
 
     date_hierarchy = 'criado_em'
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+
+        if not (
+            request.user.is_superuser
+            or request.user.has_perm(
+                'ingressos.confirmar_pagamento_cesta_basica'
+            )
+        ):
+            actions.pop('confirmar_pagamento_presencial', None)
+
+        return actions
 # Register your models here.
