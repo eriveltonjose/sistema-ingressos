@@ -584,6 +584,11 @@ def ingressos_vendidos(request):
         cancelado=False
     ).count()
 
+    total_cesta_basica = ingressos.filter(
+        forma_pagamento='CESTA_BASICA',
+        cancelado=False
+    ).count()
+
     if filtro == 'associados':
         ingressos = ingressos.filter(associado=True)
 
@@ -607,7 +612,12 @@ def ingressos_vendidos(request):
     elif filtro == 'cartao':
         ingressos = ingressos.filter(
             forma_pagamento='CREDIT_CARD'
-        )    
+        )
+
+    elif filtro == 'cesta_basica':
+        ingressos = ingressos.filter(
+            forma_pagamento='CESTA_BASICA'
+        )
 
     # ANONIMIZAR DADOS
     for ingresso in ingressos:
@@ -627,6 +637,7 @@ def ingressos_vendidos(request):
             'total_nao_associados': total_nao_associados,
             'total_pix': total_pix,
             'total_cartao': total_cartao,
+            'total_cesta_basica': total_cesta_basica,
             'total_utilizados': total_utilizados,
             'total_cancelados': total_cancelados,
             'total_validos': total_validos

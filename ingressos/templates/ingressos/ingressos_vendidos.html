@@ -203,6 +203,13 @@
         </div>
     </a>
 
+    <a class="card-link" href="?{% if evento_id %}evento={{ evento_id }}&{% endif %}filtro=cesta_basica">
+        <div class="card">
+            <p>🧺 Cesta Básica</p>
+            <div class="numero" style="color:#8b4513;">{{ total_cesta_basica }}</div>
+        </div>
+    </a>
+
 </div>
 
 </div>
@@ -305,6 +312,8 @@
                 Pix
             {% elif ingresso.forma_pagamento == 'CREDIT_CARD' %}
                 Cartão de Crédito
+            {% elif ingresso.forma_pagamento == 'CESTA_BASICA' %}
+                Cesta Básica
             {% else %}
                 Não informado
             {% endif %}
