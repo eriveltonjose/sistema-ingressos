@@ -887,7 +887,8 @@ def exportar_csv(request):
         'CPF',
         'Status',
         'Data Compra',
-        'Hora Compra'
+        'Hora Compra',
+        'Pagamento'
     ])
 
     for ingresso in ingressos:
@@ -897,6 +898,12 @@ def exportar_csv(request):
             status = 'Utilizado'
         else:
             status = 'Valido'
+
+        pagamento = {
+            'PIX': 'Pix',
+            'CREDIT_CARD': 'Cartão de Crédito',
+            'CESTA_BASICA': 'Cesta Básica',
+        }.get(ingresso.forma_pagamento, 'Não informado')
 
         data_local = timezone.localtime(ingresso.criado_em)
 
@@ -909,7 +916,8 @@ def exportar_csv(request):
             ingresso.cpf,
             status,
             data_local.strftime('%d/%m/%Y'),
-            data_local.strftime('%H:%M')
+            data_local.strftime('%H:%M'),
+            pagamento
         ])
 
     return response
