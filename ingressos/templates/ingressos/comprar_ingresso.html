@@ -218,11 +218,7 @@
 
                     <h3>🎟️ Benefício da primeira compra</h3>
 
-                    <p>
-                        Nesta primeira compra, você pagará por
-                        <strong>1 ingresso</strong> e receberá
-                        <strong>{{ quantidade_prevista }} convites</strong>.
-                    </p>
+                    <p>1 unidade paga gera 2 convites; cada unidade adicional paga acrescenta 1 convite.</p>
 
                 {% else %}
 
@@ -230,23 +226,12 @@
 
                     <p>
                         Como você já utilizou o benefício da primeira compra,
-                        escolha abaixo quantos ingressos deseja comprar.
+                        cada unidade paga gera 1 convite.
                     </p>
 
                 {% endif %}
 
             </div>
-
-            {% if primeira_compra %}
-
-                <input
-                    type="hidden"
-                    id="quantidade"
-                    name="quantidade"
-                    value="1"
-                >
-
-            {% else %}
 
                 <label>Quantidade de ingressos</label>
 
@@ -255,12 +240,10 @@
                     id="quantidade"
                     name="quantidade"
                     min="1"
-                    max="{{ disponiveis }}"
+                    max="{{ max_quantidade }}"
                     value="1"
                     required
                 >
-
-            {% endif %}
 
         {% else %}
 
@@ -271,7 +254,7 @@
             id="quantidade"
             name="quantidade"
             min="1"
-            max="{{ disponiveis }}"
+            max="{{ max_quantidade }}"
             value="1"
             required
         >
@@ -385,7 +368,14 @@
         <select name="forma_pagamento" id="forma_pagamento" required>
             <option value="PIX">Pix</option>
             <option value="CREDIT_CARD">Cartão de crédito</option>
+            <option value="CESTA_BASICA">Cesta Básica — entrega presencial</option>
         </select>
+
+        <div id="cesta-box" style="display:none;">
+            <p><strong>Quantidade de cestas: <span id="quantidade-cestas">1</span></strong></p>
+            <p>Entrega presencial na secretaria da AMBr</p>
+            <p>Os convites serão enviados após a confirmação do recebimento.</p>
+        </div>
 
         <div id="parcelas-box" style="display:none;">
             <label>Parcelamento</label>
@@ -399,7 +389,7 @@
             </select>
         </div>
 
-         {% if disponiveis > 0 %}
+         {% if max_quantidade > 0 %}
             <button type="submit">
                 Fazer Pagamento
             </button>
@@ -420,11 +410,14 @@
     const valorTotal = document.getElementById("valor-total");
     const formaPagamento = document.getElementById("forma_pagamento");
     const parcelasBox = document.getElementById("parcelas-box");
+    const cestaBox = document.getElementById("cesta-box");
+    const quantidadeCestas = document.getElementById("quantidade-cestas");
 
     function atualizarTotal(){
         let qtd = parseInt(quantidade.value || 1);
         let total = valorIngresso * qtd;
         valorTotal.innerText = total.toFixed(2).replace(".", ",");
+        quantidadeCestas.innerText = qtd;
     }
 
     quantidade.addEventListener("input", atualizarTotal);
@@ -435,6 +428,7 @@
         } else {
             parcelasBox.style.display = "none";
         }
+        cestaBox.style.display = this.value === "CESTA_BASICA" ? "block" : "none";
     });
 
     atualizarTotal();

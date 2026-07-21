@@ -28,6 +28,12 @@ from datetime import datetime
 from django.shortcuts import render, get_object_or_404
 import requests
 from django.db import transaction
+from .regras_compra import (
+    beneficio_ja_utilizado,
+    calcular_disponibilidade,
+    calcular_quantidade_convites,
+    detalhar_previsao_convites,
+)
 
 def anonimizar_telefone(telefone):
     telefone = str(telefone or '')
@@ -322,25 +328,10 @@ def comprar_ingresso(request, evento_id):
 
     if associado_validado:
         valor_unitario = evento.valor_associado
-        limite_ingressos = evento.quantidade_associado
-
-        vendidos_tipo = Ingresso.objects.filter(
-            evento=evento,
-            associado=True,
-            cancelado=False
-        ).count()
-
     else:
         valor_unitario = evento.valor_nao_associado
-        limite_ingressos = evento.quantidade_nao_associado
 
-        vendidos_tipo = Ingresso.objects.filter(
-            evento=evento,
-            associado=False,
-            cancelado=False
-        ).count()
-
-    disponiveis = limite_ingressos - vendidos_tipo
+    disponiveis = calcular_disponibilidade(evento, associado_validado)
 
     if (
         request.GET.get('tipo') == 'associado'
@@ -353,27 +344,15 @@ def comprar_ingresso(request, evento_id):
         return redirect(f'/associado/{evento.id}/')
 
     # Define quantos ingressos serão gerados no evento especial
-    quantidade_prevista = 1
-    primeira_compra = False
-
-    if (
+    cpf_validado = request.session.get('associado_cpf', '')
+    primeira_compra = bool(
         evento.exclusivo_associado
         and evento.beneficio_primeira_compra
         and associado_validado
-    ):
-        cpf_validado = request.session.get('associado_cpf', '')
-
-        ja_comprou = Ingresso.objects.filter(
-            evento=evento,
-            cpf=cpf_validado,
-            associado=True,
-            cancelado=False
-        ).exists()
-
-        primeira_compra = not ja_comprou
-
-        if primeira_compra:
-            quantidade_prevista = evento.quantidade_primeira_compra
+        and not beneficio_ja_utilizado(evento, cpf_validado)
+    )
+    quantidade_prevista = 2 if primeira_compra else 1
+    max_quantidade = max(0, disponiveis - (1 if primeira_compra else 0))
 
     if request.method == 'POST':
 
@@ -384,18 +363,13 @@ def comprar_ingresso(request, evento_id):
             telefone = request.session.get('associado_telefone', '')
             cpf = request.session.get('associado_cpf', '')
 
-            if primeira_compra:
+            try:
+                quantidade = int(request.POST.get('quantidade', 1))
+            except (TypeError, ValueError):
                 quantidade = 1
-            else:
-                try:
-                    quantidade = int(
-                        request.POST.get('quantidade', 1)
-                    )
-                except (TypeError, ValueError):
-                    quantidade = 1
 
-                if quantidade < 1:
-                    quantidade = 1
+            if quantidade < 1:
+                quantidade = 1
 
         else:
             nome = request.POST.get('nome')
@@ -415,16 +389,20 @@ def comprar_ingresso(request, evento_id):
             'PIX'
         )
 
+        if forma_pagamento not in ('PIX', 'CREDIT_CARD', 'CESTA_BASICA'):
+            messages.error(request, 'Forma de pagamento inválida.')
+            return redirect('comprar_ingresso', evento_id=evento.id)
+
         try:
             parcelas = int(request.POST.get('parcelas', 1))
         except (TypeError, ValueError):
             parcelas = 1
 
         # No evento especial, verifica o número real de convites
-        quantidade_para_estoque = (
-            quantidade_prevista
-            if evento.exclusivo_associado and primeira_compra
-            else quantidade
+        quantidade_para_estoque, primeira_compra = (
+            calcular_quantidade_convites(
+                evento, cpf, associado_validado, quantidade
+            )
         )
 
         if quantidade_para_estoque > disponiveis:
@@ -460,22 +438,33 @@ def comprar_ingresso(request, evento_id):
                     'valor_unitario': valor_unitario,
                     'quantidade_prevista': quantidade_prevista,
                     'primeira_compra': primeira_compra,
+                    'max_quantidade': max_quantidade,
                 }
             )
 
-        # Evento exclusivo cobra uma unidade,
-        # embora possa gerar dois convites na primeira compra
+        # O valor econômico sempre corresponde à quantidade paga.
         valor_total = valor_unitario * quantidade
 
+        if forma_pagamento == 'CESTA_BASICA':
+            pedido = Pedido.objects.create(
+                evento=evento,
+                nome=nome,
+                email=email,
+                telefone=telefone,
+                cpf=cpf,
+                associado=associado_validado,
+                quantidade=quantidade,
+                valor_total=valor_total,
+                forma_pagamento='CESTA_BASICA',
+                status='PENDENTE',
+            )
+            request.session['pedido_cesta_basica_id'] = pedido.id
+            return redirect('pedido_cesta_basica', pedido_id=pedido.id)
+
         dados_pagamento = criar_pagamento_asaas(
-            nome=nome,
-            cpf=cpf,
-            email=email,
-            telefone=telefone,
-            valor_total=valor_total,
-            descricao=evento.nome,
-            forma_pagamento=forma_pagamento,
-            parcelas=parcelas
+            nome=nome, cpf=cpf, email=email, telefone=telefone,
+            valor_total=valor_total, descricao=evento.nome,
+            forma_pagamento=forma_pagamento, parcelas=parcelas
         )
 
         Pedido.objects.create(
@@ -520,8 +509,31 @@ def comprar_ingresso(request, evento_id):
             'valor_unitario': valor_unitario,
             'quantidade_prevista': quantidade_prevista,
             'primeira_compra': primeira_compra,
+            'max_quantidade': max_quantidade,
         }
     )
+
+
+def pedido_cesta_basica(request, pedido_id):
+    if request.session.get('pedido_cesta_basica_id') != pedido_id:
+        return redirect('lista_eventos')
+
+    pedido = get_object_or_404(
+        Pedido,
+        pk=pedido_id,
+        forma_pagamento='CESTA_BASICA',
+    )
+    previsao = detalhar_previsao_convites(
+        pedido.evento,
+        pedido.cpf,
+        pedido.associado,
+        pedido.quantidade,
+        pedido_excluido=pedido,
+    )
+    return render(request, 'ingressos/pedido_cesta_basica.html', {
+        'pedido': pedido,
+        **previsao,
+    })
 
 @login_required
 def ingresso_sucesso(request, ingresso_id):
@@ -1211,14 +1223,23 @@ def webhook_asaas(request):
                 'motivo': 'pagamento nao pertence ao sistema de ingressos'
             })
 
-        # Evita gerar ingressos novamente caso o Asaas repita o webhook
+        # Evita duplicidade e não permite baixar cesta/cancelado via Asaas.
         if pedido.status == 'PAGO':
             return JsonResponse({
                 'status': 'ja_processado',
                 'pedido': pedido.id
             })
 
-        evento = pedido.evento
+        if (
+            pedido.status != 'PENDENTE'
+            or pedido.forma_pagamento not in ('PIX', 'CREDIT_CARD')
+        ):
+            return JsonResponse({
+                'status': 'ignorado',
+                'motivo': 'pedido nao elegivel para confirmacao pelo Asaas',
+            })
+
+        evento = Evento.objects.select_for_update().get(pk=pedido.evento_id)
 
         # Regra especial do evento exclusivo para associados
         if (
@@ -1227,25 +1248,21 @@ def webhook_asaas(request):
             and pedido.associado
         ):
 
-            ja_comprou = Pedido.objects.filter(
-                evento=evento,
-                cpf=pedido.cpf,
-                associado=True,
-                status='PAGO'
-            ).exclude(
-                pk=pedido.pk
-            ).exists()
-
-            if ja_comprou:
-                quantidade_ingressos = pedido.quantidade
-            else:
-                quantidade_ingressos = (
-                    evento.quantidade_primeira_compra
-                )
+            quantidade_ingressos, _ = calcular_quantidade_convites(
+                evento, pedido.cpf, pedido.associado, pedido.quantidade
+            )
 
         else:
             # Mantém o funcionamento normal dos outros eventos
             quantidade_ingressos = pedido.quantidade
+
+        if quantidade_ingressos > calcular_disponibilidade(
+            evento, pedido.associado
+        ):
+            return JsonResponse({
+                'status': 'erro',
+                'motivo': 'capacidade insuficiente para gerar os ingressos',
+            }, status=409)
 
         for i in range(quantidade_ingressos):
 

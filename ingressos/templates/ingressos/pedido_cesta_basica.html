@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido registrado</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 30px 15px;
+            background: #f4f6f9;
+            color: #222;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 620px;
+            margin: 0 auto;
+            padding: 35px;
+            overflow: hidden;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.10);
+        }
+
+        .banner {
+            width: 100%;
+            margin-bottom: 26px;
+        }
+
+        .banner img {
+            display: block;
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .cabecalho {
+            text-align: center;
+        }
+
+        .icone-sucesso {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 68px;
+            height: 68px;
+            margin-bottom: 14px;
+            border-radius: 50%;
+            background: #e8f7ee;
+            color: #198754;
+            font-size: 38px;
+            font-weight: bold;
+        }
+
+        h1 {
+            margin: 0;
+            color: #123f73;
+            font-size: 30px;
+            line-height: 1.2;
+        }
+
+        .evento {
+            margin: 10px 0 26px;
+            color: #536273;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .resumo {
+            margin-bottom: 22px;
+            padding: 18px 20px;
+            background: #f1f5ff;
+            border-left: 5px solid #0d6efd;
+            border-radius: 10px;
+        }
+
+        .resumo h2 {
+            margin: 0 0 14px;
+            color: #123f73;
+            font-size: 19px;
+        }
+
+        .linha-resumo {
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 9px 0;
+            border-bottom: 1px solid #dce5f4;
+        }
+
+        .linha-resumo:last-child {
+            border-bottom: 0;
+        }
+
+        .rotulo {
+            color: #536273;
+        }
+
+        .valor {
+            color: #182534;
+            text-align: right;
+            font-weight: bold;
+        }
+
+        .instrucao,
+        .aviso,
+        .observacao,
+        .beneficio {
+            margin: 16px 0;
+            padding: 16px;
+            border-radius: 10px;
+            line-height: 1.55;
+        }
+
+        .instrucao {
+            background: #fff8e1;
+            border: 1px solid #f1ca69;
+            color: #624b12;
+            font-weight: bold;
+        }
+
+        .beneficio {
+            background: #eef5ff;
+            border: 1px solid #a8c8f5;
+            color: #123f73;
+        }
+
+        .beneficio h2 {
+            margin: 0 0 10px;
+            font-size: 20px;
+        }
+
+        .beneficio p {
+            margin: 7px 0;
+        }
+
+        .total-previsto {
+            font-weight: bold;
+        }
+
+        .aviso {
+            background: #e8f7ee;
+            border: 1px solid #8fd0a8;
+            color: #126537;
+            font-weight: bold;
+        }
+
+        .observacao {
+            background: #f7f8fa;
+            color: #59636f;
+            font-size: 14px;
+        }
+
+        .botao {
+            display: block;
+            width: 100%;
+            margin-top: 24px;
+            padding: 15px 20px;
+            background: #0d6efd;
+            color: #fff;
+            border-radius: 10px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: bold;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .botao:hover,
+        .botao:focus {
+            background: #0b5ed7;
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 16px 10px;
+            }
+
+            .card {
+                padding: 22px 18px;
+                border-radius: 14px;
+            }
+
+            h1 {
+                font-size: 25px;
+            }
+
+            .evento {
+                font-size: 16px;
+            }
+
+            .linha-resumo {
+                display: block;
+            }
+
+            .valor {
+                margin-top: 4px;
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        {% if pedido.evento.banner %}
+            <div class="banner">
+                <img
+                    src="{{ pedido.evento.banner.url }}"
+                    alt="Banner do evento {{ pedido.evento.nome }}"
+                >
+            </div>
+        {% endif %}
+
+        <header class="cabecalho">
+            <div class="icone-sucesso" aria-hidden="true">✓</div>
+            <h1>Pedido registrado</h1>
+            <p class="evento">{{ pedido.evento.nome }}</p>
+        </header>
+
+        <section class="resumo" aria-label="Resumo do pedido">
+            <h2>Resumo do pedido</h2>
+            <div class="linha-resumo">
+                <span class="rotulo">Número do pedido</span>
+                <span class="valor">#{{ pedido.id }}</span>
+            </div>
+            <div class="linha-resumo">
+                <span class="rotulo">Quantidade</span>
+                <span class="valor">
+                    {{ pedido.quantidade }} cesta{% if pedido.quantidade != 1 %}s{% endif %} básica{% if pedido.quantidade != 1 %}s{% endif %}
+                </span>
+            </div>
+            <div class="linha-resumo">
+                <span class="valor"><strong>Convites previstos:</strong> {{ quantidade_convites }} convite{% if quantidade_convites != 1 %}s{% endif %} previsto{% if quantidade_convites != 1 %}s{% endif %}</span>
+            </div>
+            <div class="linha-resumo">
+                <span class="rotulo">Valor econômico do pedido</span>
+                <span class="valor">R$ {{ pedido.valor_total|floatformat:2 }}</span>
+            </div>
+        </section>
+
+        <section class="beneficio" aria-label="Previsão de convites">
+            {% if primeira_compra %}
+                <h2>Benefício da primeira compra</h2>
+                {% if convites_adicionais == 0 %}
+                    <p>Você tem direito a 2 convites pela primeira unidade adquirida.</p>
+                {% else %}
+                    <p>Você tem direito a 2 convites pela primeira unidade adquirida e mais {{ convites_adicionais }} convite{% if convites_adicionais != 1 %}s{% endif %} adiciona{% if convites_adicionais == 1 %}l{% else %}is{% endif %}.</p>
+                {% endif %}
+            {% else %}
+                <h2>Compra adicional</h2>
+                <p>Nesta compra, cada unidade paga corresponde a 1 convite.</p>
+                <p>O benefício da primeira compra já foi utilizado.</p>
+            {% endif %}
+            <p class="total-previsto">Total previsto: {{ quantidade_convites }} convite{% if quantidade_convites != 1 %}s{% endif %}.</p>
+        </section>
+
+        <p class="instrucao">
+            Entregue a quantidade informada de cestas básicas na secretaria da AMBr para liberar seus convites.
+        </p>
+
+        <p class="aviso">
+            Os convites somente serão enviados após a confirmação presencial.
+        </p>
+
+        <p class="observacao">
+            A quantidade de convites poderá ser recalculada caso o benefício da primeira compra seja utilizado antes da confirmação presencial.
+        </p>
+
+        <a class="botao" href="/">Voltar para eventos</a>
+    </main>
+</body>
+</html>

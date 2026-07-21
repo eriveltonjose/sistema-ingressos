@@ -3,6 +3,10 @@ from django.db import transaction
 
 from .models import Evento, Ingresso, Pedido, ValidacaoAssociado
 from .views import enviar_email_ingressos
+from .regras_compra import (
+    calcular_disponibilidade,
+    calcular_quantidade_convites,
+)
 
 admin.site.register(ValidacaoAssociado)
 
@@ -175,7 +179,6 @@ def confirmar_pagamento_presencial(modeladmin, request, queryset):
         return
 
     processados = 0
-    reenviados = 0
     ignorados = 0
     erros = 0
 
@@ -191,7 +194,10 @@ def confirmar_pagamento_presencial(modeladmin, request, queryset):
                     .get(pk=pedido_id)
                 )
 
-                if pedido.status != 'PENDENTE':
+                if (
+                    pedido.status != 'PENDENTE'
+                    or pedido.forma_pagamento != 'CESTA_BASICA'
+                ):
                     ignorados += 1
                     continue
 
@@ -201,11 +207,11 @@ def confirmar_pagamento_presencial(modeladmin, request, queryset):
                 )
 
                 if ingressos_existentes:
-                    ingressos_para_email = ingressos_existentes
-                    reenviados += 1
-
+                    ignorados += 1
+                    continue
                 else:
                     evento = pedido.evento
+                    Evento.objects.select_for_update().get(pk=evento.pk)
 
                     # Regra especial do evento exclusivo
                     if (
@@ -214,24 +220,24 @@ def confirmar_pagamento_presencial(modeladmin, request, queryset):
                         and pedido.associado
                     ):
 
-                        ja_comprou = Ingresso.objects.filter(
-                            evento=evento,
-                            cpf=pedido.cpf,
-                            associado=True,
-                            cancelado=False
-                        ).exclude(
-                            pedido=pedido
-                        ).exists()
-
-                        if ja_comprou:
-                            quantidade_ingressos = pedido.quantidade
-                        else:
-                            quantidade_ingressos = (
-                                evento.quantidade_primeira_compra
+                        quantidade_ingressos, _ = (
+                            calcular_quantidade_convites(
+                                evento,
+                                pedido.cpf,
+                                pedido.associado,
+                                pedido.quantidade,
                             )
+                        )
 
                     else:
                         quantidade_ingressos = pedido.quantidade
+
+                    if quantidade_ingressos > calcular_disponibilidade(
+                        evento, pedido.associado
+                    ):
+                        raise ValueError(
+                            'capacidade insuficiente para liberar os convites'
+                        )
 
                     ingressos_para_email = []
 
@@ -251,14 +257,7 @@ def confirmar_pagamento_presencial(modeladmin, request, queryset):
                         ingressos_para_email.append(ingresso)
 
                     pedido.status = 'PAGO'
-                    pedido.forma_pagamento = 'CESTA_BASICA'
-
-                    pedido.save(
-                        update_fields=[
-                            'status',
-                            'forma_pagamento',
-                        ]
-                    )
+                    pedido.save(update_fields=['status'])
 
                     processados += 1
 
@@ -285,19 +284,11 @@ def confirmar_pagamento_presencial(modeladmin, request, queryset):
             level=messages.SUCCESS
         )
 
-    if reenviados:
-        modeladmin.message_user(
-            request,
-            f'{reenviados} pedido(s) já possuíam ingressos. '
-            f'Os ingressos existentes foram reenviados.',
-            level=messages.WARNING
-        )
-
     if ignorados:
         modeladmin.message_user(
             request,
-            f'{ignorados} pedido(s) ignorado(s) por já estarem pagos '
-            f'ou cancelados.',
+            f'{ignorados} pedido(s) ignorado(s): somente pedidos pendentes '
+            f'com pagamento CESTA_BASICA e sem ingressos podem ser baixados.',
             level=messages.WARNING
         )
 
@@ -359,6 +350,15 @@ class PedidoAdmin(admin.ModelAdmin):
     )
 
     date_hierarchy = 'criado_em'
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
 
     def get_actions(self, request):
         actions = super().get_actions(request)

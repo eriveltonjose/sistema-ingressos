@@ -193,7 +193,24 @@
     .opcao-valor{
         font-size:24px;
         font-weight:bold;
-        margin-bottom:18px;
+        margin-bottom:4px;
+    }
+
+    .opcao-unidade{
+        color:#5f6873;
+        font-size:15px;
+        margin-bottom:12px;
+    }
+
+    .aviso-beneficio{
+        max-width:280px;
+        margin:0 auto 18px;
+        padding:9px 11px;
+        background:#eef8f2;
+        color:#16683b;
+        border-radius:8px;
+        font-size:14px;
+        line-height:1.4;
     }
 
     .btn-associado,
@@ -285,8 +302,16 @@
                 <div class="opcao-titulo">Associado AMBr</div>
 
                     <div class="opcao-valor">
-                        R$ {{ evento.valor_associado }}
+                        R$ {{ evento.valor_associado }} ou 1 cesta básica
                     </div>
+
+                    <div class="opcao-unidade">por unidade</div>
+
+                    {% if evento.beneficio_primeira_compra %}
+                        <div class="aviso-beneficio">
+                            Na primeira compra, 1 unidade dá direito a 2 convites.
+                        </div>
+                    {% endif %}
 
                     {% if evento.ativo %}
                         <a href="/associado/{{ evento.id }}/" class="btn-associado">
