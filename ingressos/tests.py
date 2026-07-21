@@ -602,6 +602,168 @@ class PedidoAdminCestaBasicaPermissionTests(TestCase):
 
 
 @override_settings(ASAAS_WEBHOOK_TOKEN='token-teste')
+class CartaoCreditoPorEventoTests(TestCase):
+    def setUp(self):
+        self.evento_com_cartao = self.criar_evento(True)
+        self.evento_sem_cartao = self.criar_evento(False)
+        self.dados = {
+            'nome': 'Comprador Teste',
+            'email': 'comprador@example.com',
+            'telefone': '11999999999',
+            'cpf': '12345678901',
+            'quantidade': 1,
+        }
+
+    def criar_evento(self, aceita_cartao_credito):
+        return Evento.objects.create(
+            nome=f'Evento cartão {aceita_cartao_credito}',
+            data=timezone.now() + timedelta(days=1),
+            local='Auditório',
+            valor='100.00',
+            valor_associado='80.00',
+            valor_nao_associado='100.00',
+            quantidade_total=100,
+            quantidade_associado=50,
+            quantidade_nao_associado=50,
+            aceita_cartao_credito=aceita_cartao_credito,
+        )
+
+    def comprar(self, evento, forma, follow=False):
+        return self.client.post(
+            reverse('comprar_ingresso', args=[evento.pk]),
+            {**self.dados, 'forma_pagamento': forma},
+            follow=follow,
+        )
+
+    def test_checkout_mostra_cartao_somente_quando_habilitado(self):
+        habilitado = self.client.get(reverse(
+            'comprar_ingresso', args=[self.evento_com_cartao.pk]
+        ))
+        desabilitado = self.client.get(reverse(
+            'comprar_ingresso', args=[self.evento_sem_cartao.pk]
+        ))
+
+        self.assertContains(habilitado, 'value="CREDIT_CARD"')
+        self.assertContains(habilitado, 'id="parcelas-box"')
+        self.assertNotContains(desabilitado, 'value="CREDIT_CARD"')
+        self.assertNotContains(desabilitado, 'id="parcelas-box"')
+        for response in (habilitado, desabilitado):
+            self.assertContains(response, 'value="PIX"')
+            self.assertContains(response, 'value="CESTA_BASICA"')
+
+    @patch('ingressos.views.criar_pagamento_asaas')
+    def test_evento_habilitado_aceita_cartao(self, criar_asaas):
+        criar_asaas.return_value = {
+            'id': 'pay-cartao-habilitado',
+            'invoiceUrl': '/fatura/',
+        }
+
+        response = self.comprar(self.evento_com_cartao, 'CREDIT_CARD')
+
+        self.assertRedirects(response, '/fatura/', fetch_redirect_response=False)
+        self.assertTrue(Pedido.objects.filter(
+            evento=self.evento_com_cartao,
+            forma_pagamento='CREDIT_CARD',
+        ).exists())
+        criar_asaas.assert_called_once()
+
+    @patch('ingressos.views.criar_pagamento_asaas')
+    def test_post_adulterado_rejeita_cartao_sem_criar_pedido(self, criar_asaas):
+        response = self.comprar(
+            self.evento_sem_cartao, 'CREDIT_CARD', follow=True
+        )
+
+        self.assertContains(
+            response,
+            'Cartão de crédito não está disponível para este evento.'
+        )
+        self.assertFalse(Pedido.objects.exists())
+        criar_asaas.assert_not_called()
+
+    @patch('ingressos.views.criar_pagamento_asaas')
+    def test_pix_funciona_com_cartao_habilitado_ou_desabilitado(self, criar_asaas):
+        criar_asaas.side_effect = [
+            {'id': 'pay-pix-1', 'invoiceUrl': '/fatura/1/'},
+            {'id': 'pay-pix-2', 'invoiceUrl': '/fatura/2/'},
+        ]
+
+        for evento in (self.evento_com_cartao, self.evento_sem_cartao):
+            with self.subTest(aceita_cartao=evento.aceita_cartao_credito):
+                self.comprar(evento, 'PIX')
+
+        self.assertEqual(Pedido.objects.filter(forma_pagamento='PIX').count(), 2)
+        self.assertEqual(criar_asaas.call_count, 2)
+
+    @patch('ingressos.views.criar_pagamento_asaas')
+    def test_cesta_funciona_nos_dois_tipos_sem_asaas(self, criar_asaas):
+        for evento in (self.evento_com_cartao, self.evento_sem_cartao):
+            with self.subTest(aceita_cartao=evento.aceita_cartao_credito):
+                self.comprar(evento, 'CESTA_BASICA')
+
+        self.assertEqual(Pedido.objects.filter(
+            forma_pagamento='CESTA_BASICA'
+        ).count(), 2)
+        criar_asaas.assert_not_called()
+
+    def test_cartao_historico_permanece_no_dashboard_e_csv(self):
+        ingresso = Ingresso.objects.create(
+            evento=self.evento_sem_cartao,
+            nome_comprador='Compra histórica no cartão',
+            email='historico@example.com',
+            telefone='11999999999',
+            cpf='12345678901',
+            forma_pagamento='CREDIT_CARD',
+        )
+        usuario = get_user_model().objects.create_user(
+            username='operador-historico', password='senha'
+        )
+        self.client.force_login(usuario)
+
+        dashboard = self.client.get(reverse('ingressos_vendidos'))
+        csv_response = self.client.get(reverse('exportar_csv'))
+
+        self.assertContains(dashboard, ingresso.nome_comprador)
+        self.assertContains(dashboard, 'Cartão de Crédito')
+        self.assertIn(
+            'Cartão de Crédito', csv_response.content.decode('utf-8')
+        )
+
+    @patch('ingressos.views.enviar_email_ingressos')
+    def test_webhook_processa_pedido_antigo_de_cartao(self, enviar_email):
+        pedido = Pedido.objects.create(
+            evento=self.evento_sem_cartao,
+            nome='Compra histórica',
+            email='historico@example.com',
+            telefone='11999999999',
+            cpf='12345678901',
+            quantidade=1,
+            valor_total='100.00',
+            asaas_payment_id='pay-cartao-historico',
+            status='PENDENTE',
+            forma_pagamento='CREDIT_CARD',
+        )
+
+        response = self.client.post(
+            reverse('webhook_asaas'),
+            data=json.dumps({
+                'event': 'PAYMENT_CONFIRMED',
+                'payment': {'id': pedido.asaas_payment_id},
+            }),
+            content_type='application/json',
+            HTTP_ASAAS_ACCESS_TOKEN='token-teste',
+        )
+
+        pedido.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(pedido.status, 'PAGO')
+        self.assertEqual(pedido.ingressos.count(), 1)
+        self.assertEqual(
+            pedido.ingressos.get().forma_pagamento, 'CREDIT_CARD'
+        )
+        enviar_email.assert_called_once()
+
+
+@override_settings(ASAAS_WEBHOOK_TOKEN='token-teste')
 class FluxoBeneficioPrimeiraCompraTests(TestCase):
     cpf = '12345678901'
 

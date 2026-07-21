@@ -22,6 +22,11 @@ class Evento(models.Model):
         default=0
     )
 
+    aceita_cartao_credito = models.BooleanField(
+        default=True,
+        verbose_name='Aceitar cartão de crédito'
+    )
+
     quantidade_total = models.PositiveIntegerField()
 
     quantidade_associado = models.PositiveIntegerField(default=0)

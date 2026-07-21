@@ -19,12 +19,14 @@ class EventoAdmin(admin.ModelAdmin):
         'data',
         'local',
         'ativo',
+        'aceita_cartao_credito',
         'exclusivo_associado',
         'beneficio_primeira_compra',
     )
 
     list_filter = (
         'ativo',
+        'aceita_cartao_credito',
         'exclusivo_associado',
         'beneficio_primeira_compra',
     )
@@ -64,6 +66,14 @@ class EventoAdmin(admin.ModelAdmin):
                     'quantidade_total',
                     'quantidade_associado',
                     'quantidade_nao_associado',
+                )
+            }
+        ),
+        (
+            'Formas de pagamento',
+            {
+                'fields': (
+                    'aceita_cartao_credito',
                 )
             }
         ),

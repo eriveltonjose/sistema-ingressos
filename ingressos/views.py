@@ -393,6 +393,16 @@ def comprar_ingresso(request, evento_id):
             messages.error(request, 'Forma de pagamento inválida.')
             return redirect('comprar_ingresso', evento_id=evento.id)
 
+        if (
+            forma_pagamento == 'CREDIT_CARD'
+            and not evento.aceita_cartao_credito
+        ):
+            messages.error(
+                request,
+                'Cartão de crédito não está disponível para este evento.'
+            )
+            return redirect('comprar_ingresso', evento_id=evento.id)
+
         try:
             parcelas = int(request.POST.get('parcelas', 1))
         except (TypeError, ValueError):

@@ -367,7 +367,9 @@
         <label>Escolha a forma de pagamento abaixo</label>
         <select name="forma_pagamento" id="forma_pagamento" required>
             <option value="PIX">Pix</option>
+            {% if evento.aceita_cartao_credito %}
             <option value="CREDIT_CARD">Cartão de crédito</option>
+            {% endif %}
             <option value="CESTA_BASICA">Cesta Básica — entrega presencial</option>
         </select>
 
@@ -377,6 +379,7 @@
             <p>Os convites serão enviados após a confirmação do recebimento.</p>
         </div>
 
+        {% if evento.aceita_cartao_credito %}
         <div id="parcelas-box" style="display:none;">
             <label>Parcelamento</label>
             <select name="parcelas" id="parcelas">
@@ -388,6 +391,7 @@
                 <option value="6">6x sem juros</option>
             </select>
         </div>
+        {% endif %}
 
          {% if max_quantidade > 0 %}
             <button type="submit">
@@ -409,7 +413,9 @@
     const quantidade = document.getElementById("quantidade");
     const valorTotal = document.getElementById("valor-total");
     const formaPagamento = document.getElementById("forma_pagamento");
+    {% if evento.aceita_cartao_credito %}
     const parcelasBox = document.getElementById("parcelas-box");
+    {% endif %}
     const cestaBox = document.getElementById("cesta-box");
     const quantidadeCestas = document.getElementById("quantidade-cestas");
 
@@ -423,11 +429,13 @@
     quantidade.addEventListener("input", atualizarTotal);
 
     formaPagamento.addEventListener("change", function(){
+        {% if evento.aceita_cartao_credito %}
         if(this.value === "CREDIT_CARD"){
             parcelasBox.style.display = "block";
         } else {
             parcelasBox.style.display = "none";
         }
+        {% endif %}
         cestaBox.style.display = this.value === "CESTA_BASICA" ? "block" : "none";
     });
 
